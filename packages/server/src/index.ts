@@ -336,6 +336,38 @@ export async function startServer(opts: ServerOptions = {}): Promise<void> {
       discord = new DiscordAdapter(process.env.DISCORD_BOT_TOKEN, discordStreamingMode);
       const discordAdapter = discord; // Capture for use in callback
 
+      // Register /post-game slash command (queued for deployment on ClientReady)
+      const discordGuildId = process.env.DISCORD_GUILD_ID;
+      discordAdapter.registerApplicationCommands(
+        [
+          {
+            name: 'post-game',
+            description: 'Start a game announcement workflow in this forum post',
+          },
+        ],
+        discordGuildId
+      );
+
+      // Handle /post-game slash command interactions
+      discordAdapter.onInteraction(async interaction => {
+        if (interaction.commandName !== 'post-game') return;
+
+        const channelId = interaction.channelId;
+
+        await interaction.reply({
+          content: '🎲 Starting game announcement workflow...',
+          ephemeral: true,
+        });
+
+        lockManager
+          .acquireLock(channelId, async () => {
+            await handleMessage(discordAdapter, channelId, '/workflow run discord-post-game', {
+              isolationHints: { workflowType: 'thread', workflowId: channelId },
+            });
+          })
+          .catch(createMessageErrorHandler('Discord', discordAdapter, channelId));
+      });
+
       // Register message handler
       discordAdapter.onMessage(async message => {
         // Get initial conversation ID

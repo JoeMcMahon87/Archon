@@ -1,0 +1,114 @@
+name: discord-post-game
+description: |
+  Use when: A GM (Game Master) triggers /post-game slash command in a Discord forum post.
+  Triggers: Discord /post-game slash command only — do NOT invoke via chat.
+  Does: Guides the GM through providing game details → formats a Discord announcement →
+        presents draft for GM approval (up to 3 revisions) → posts final version
+        to the originating forum post thread.
+  NOT for: Non-Discord platforms or manual chat invocations.
+
+provider: claude
+model: haiku
+interactive: true
+
+worktree:
+  enabled: false
+mutates_checkout: false
+
+nodes:
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 1: GATHER — Ask GM for game details
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: gather-details
+    model: haiku
+    allowed_tools: []
+    idle_timeout: 300000
+    prompt: |
+      You are helping a GM create a game announcement for a Discord forum post.
+      The GM has just used the /post-game slash command.
+
+      Greet them briefly and ask for the following details all at once:
+
+      1. **Game system** (e.g., D&D 5e, Pathfinder 2e, Call of Cthulhu, Mothership)
+      2. **Session title or campaign name** (e.g., "Lost Mine of Phandelver – Session 3")
+      3. **Date and time** (including timezone)
+      4. **Number of players needed** (e.g., "4–6 players" or "2 seats open")
+      5. **Any additional details** you want in the post (content warnings, voice/text, platform, requirements, etc.)
+
+      Keep it friendly and concise. Don't generate the announcement yet.
+
+  # ═══════════════════════════════════════════════════════════════
+  # GATE 1: GM provides game details
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: details-gate
+    approval:
+      message: "Please provide the game details above (system, title, date/time, players, extras)."
+      capture_response: true
+    depends_on: [gather-details]
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 2: FORMAT — Generate the announcement
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: format-announcement
+    model: sonnet
+    allowed_tools: []
+    idle_timeout: 60000
+    prompt: |
+      Format a compelling Discord game announcement based on these GM-provided details:
+
+      $details-gate.output
+
+      Requirements:
+      - Use Discord markdown formatting (bold, italics, emoji sparingly)
+      - Start with a clear title line including the game system
+      - Include: game system, session/campaign title, date & time, player count, any extras
+      - Keep it readable and scannable (use line breaks)
+      - End with a clear "How to join" or "React/reply to claim a seat" call-to-action if not specified by GM
+      - Maximum 1500 characters (Discord message limit consideration)
+
+      Output ONLY the announcement text — no preamble, no explanation.
+    depends_on: [details-gate]
+
+  # ═══════════════════════════════════════════════════════════════
+  # GATE 2: GM reviews and approves the announcement
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: review-gate
+    approval:
+      message: |
+        📋 **Review your game announcement above.**
+
+        - **Approve** to post it to this forum channel
+        - **Reject** with feedback to revise (up to 3 attempts)
+      capture_response: false
+      on_reject:
+        prompt: |
+          The GM wants changes to the announcement.
+
+          GM's feedback: $REJECTION_REASON
+
+          Original announcement:
+          $format-announcement.output
+
+          Revise the announcement based on the GM's feedback.
+          Output ONLY the revised announcement text — no preamble.
+        max_attempts: 3
+    depends_on: [format-announcement]
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 3: POST — Output the final announcement
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: post-announcement
+    model: haiku
+    allowed_tools: []
+    idle_timeout: 30000
+    prompt: |
+      The GM has approved the game announcement. Output it exactly as written below,
+      with no additional text before or after:
+
+      $format-announcement.output
+    depends_on: [review-gate]

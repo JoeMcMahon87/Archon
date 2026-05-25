@@ -9,6 +9,11 @@ import {
   Message,
   Events,
   ThreadAutoArchiveDuration,
+  REST,
+  Routes,
+  type Interaction,
+  type ChatInputCommandInteraction,
+  type ApplicationCommandData,
 } from 'discord.js';
 import type { IPlatformAdapter, MessageMetadata } from '@archon/core';
 import { createLogger } from '@archon/paths';
@@ -32,6 +37,10 @@ export class DiscordAdapter implements IPlatformAdapter {
   private messageHandler: ((message: Message) => Promise<void>) | null = null;
   private allowedUserIds: string[];
   private pendingThreads = new Map<string, Promise<string>>();
+  private interactionHandler: ((interaction: ChatInputCommandInteraction) => Promise<void>) | null =
+    null;
+  private pendingCommands: ApplicationCommandData[] = [];
+  private pendingGuildId: string | null = null;
 
   constructor(token: string, mode: 'stream' | 'batch' = 'stream') {
     this.client = new Client({
@@ -281,6 +290,40 @@ export class DiscordAdapter implements IPlatformAdapter {
    * Register a message handler for incoming messages
    * Must be called before start()
    */
+  registerApplicationCommands(commands: ApplicationCommandData[], guildId?: string): void {
+    this.pendingCommands = [...commands];
+    this.pendingGuildId = guildId ?? null;
+    getLog().debug({ count: commands.length, guildId }, 'discord.commands_queued');
+  }
+
+  onInteraction(handler: (interaction: ChatInputCommandInteraction) => Promise<void>): void {
+    this.interactionHandler = handler;
+  }
+
+  private async deployCommands(applicationId: string): Promise<void> {
+    if (this.pendingCommands.length === 0) return;
+    try {
+      const rest = new REST().setToken(this.token);
+      const body = this.pendingCommands;
+      if (this.pendingGuildId) {
+        await rest.put(Routes.applicationGuildCommands(applicationId, this.pendingGuildId), {
+          body,
+        });
+        getLog().info(
+          { count: body.length, guildId: this.pendingGuildId },
+          'discord.commands_registered_guild'
+        );
+      } else {
+        await rest.put(Routes.applicationCommands(applicationId), { body });
+        getLog().info({ count: body.length }, 'discord.commands_registered_global');
+      }
+      this.pendingCommands = [];
+    } catch (error) {
+      const err = error as Error;
+      getLog().error({ err }, 'discord.commands_registration_failed');
+    }
+  }
+
   onMessage(handler: (message: Message) => Promise<void>): void {
     this.messageHandler = handler;
   }
@@ -309,9 +352,28 @@ export class DiscordAdapter implements IPlatformAdapter {
       }
     });
 
-    // Log when ready
+    // Handle slash command interactions
+    this.client.on(Events.InteractionCreate, (interaction: Interaction) => {
+      if (!interaction.isChatInputCommand()) return;
+
+      const userId = interaction.user.id;
+      if (!isDiscordUserAuthorized(userId, this.allowedUserIds)) {
+        const maskedId = userId ? `${userId.slice(0, 4)}***` : 'unknown';
+        getLog().info({ maskedUserId: maskedId }, 'discord.unauthorized_interaction');
+        return;
+      }
+
+      if (this.interactionHandler) {
+        void this.interactionHandler(interaction);
+      }
+    });
+
+    // Log when ready and deploy slash commands
     this.client.once(Events.ClientReady, readyClient => {
       getLog().info({ tag: readyClient.user.tag }, 'discord.bot_logged_in');
+      if (this.pendingCommands.length > 0) {
+        void this.deployCommands(readyClient.user.id);
+      }
     });
 
     // Login with stored token

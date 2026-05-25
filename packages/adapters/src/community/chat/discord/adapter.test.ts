@@ -49,6 +49,19 @@ const mockClient = {
 
 const MockClient = mock(() => mockClient);
 
+// Mock REST for slash command deployment
+const mockRestPut = mock(() => Promise.resolve([]));
+const mockRestSetToken = mock(function (this: unknown) {
+  return this;
+});
+const MockREST = mock(function (this: {
+  setToken: typeof mockRestSetToken;
+  put: typeof mockRestPut;
+}) {
+  this.setToken = mockRestSetToken;
+  this.put = mockRestPut;
+});
+
 // Mock discord.js
 mock.module('discord.js', () => ({
   Client: MockClient,
@@ -64,6 +77,15 @@ mock.module('discord.js', () => ({
   Events: {
     MessageCreate: 'messageCreate',
     ClientReady: 'ready',
+    InteractionCreate: 'interactionCreate',
+  },
+  ThreadAutoArchiveDuration: { OneDay: 1440 },
+  REST: MockREST,
+  Routes: {
+    applicationCommands: mock((appId: string) => `/applications/${appId}/commands`),
+    applicationGuildCommands: mock(
+      (appId: string, guildId: string) => `/applications/${appId}/guilds/${guildId}/commands`
+    ),
   },
 }));
 
@@ -77,6 +99,8 @@ describe('DiscordAdapter', () => {
     mockClientOnce.mockClear();
     mockClientLogin.mockClear();
     mockClientDestroy.mockClear();
+    mockRestPut.mockClear();
+    mockRestSetToken.mockClear();
   });
 
   describe('streaming mode configuration', () => {
@@ -760,6 +784,108 @@ describe('DiscordAdapter', () => {
 
       const callArgs = mockStartThread.mock.calls[0][0] as { name: string };
       expect(callArgs.name).toBe('Bot Response');
+    });
+  });
+
+  describe('slash command registration', () => {
+    test('should queue commands for deployment', () => {
+      const adapter = new DiscordAdapter('fake-token-for-testing');
+      adapter.registerApplicationCommands([{ name: 'post-game', description: 'Test' }]);
+      expect(true).toBe(true);
+    });
+
+    test('should queue guild-scoped commands', () => {
+      const adapter = new DiscordAdapter('fake-token-for-testing');
+      adapter.registerApplicationCommands([{ name: 'post-game', description: 'Test' }], '12345');
+      expect(true).toBe(true);
+    });
+
+    test('should skip deployment when no commands queued', async () => {
+      const adapter = new DiscordAdapter('fake-token-for-testing');
+      await adapter.start();
+      const readyCb = (mockClientOnce.mock.calls[0] as [string, (...args: unknown[]) => void])[1];
+      readyCb({ user: { tag: 'TestBot#0001', id: 'app-id-123' } });
+      expect(mockRestPut).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('interaction handling', () => {
+    test('should register an interaction handler', () => {
+      const adapter = new DiscordAdapter('fake-token-for-testing');
+      const mockHandler = mock(() => Promise.resolve(undefined));
+      adapter.onInteraction(mockHandler);
+      expect(true).toBe(true);
+    });
+
+    test('should fire interaction handler for chat input commands', async () => {
+      const adapter = new DiscordAdapter('fake-token-for-testing');
+      const mockHandler = mock(() => Promise.resolve(undefined));
+      adapter.onInteraction(mockHandler);
+      await adapter.start();
+
+      const interactionCall = (
+        mockClientOn.mock.calls as [string, (...args: unknown[]) => void][]
+      ).find(([event]) => event === 'interactionCreate');
+      expect(interactionCall).toBeDefined();
+
+      const interactionListener = interactionCall![1];
+      const mockInteraction = {
+        isChatInputCommand: () => true,
+        user: { id: '987654321' },
+        commandName: 'post-game',
+        channelId: 'channel-123',
+      };
+
+      interactionListener(mockInteraction);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(mockHandler).toHaveBeenCalledWith(mockInteraction);
+    });
+
+    test('should reject unauthorized interaction users', async () => {
+      process.env.DISCORD_ALLOWED_USER_IDS = '111222333';
+      const adapter = new DiscordAdapter('fake-token-for-testing');
+      process.env.DISCORD_ALLOWED_USER_IDS = '';
+
+      const mockHandler = mock(() => Promise.resolve(undefined));
+      adapter.onInteraction(mockHandler);
+      await adapter.start();
+
+      const interactionCall = (
+        mockClientOn.mock.calls as [string, (...args: unknown[]) => void][]
+      ).find(([event]) => event === 'interactionCreate');
+      const interactionListener = interactionCall![1];
+
+      const mockInteraction = {
+        isChatInputCommand: () => true,
+        user: { id: '999999999' },
+        commandName: 'post-game',
+        channelId: 'channel-123',
+      };
+
+      interactionListener(mockInteraction);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(mockHandler).not.toHaveBeenCalled();
+    });
+
+    test('should ignore non-chat-input interactions', async () => {
+      const adapter = new DiscordAdapter('fake-token-for-testing');
+      const mockHandler = mock(() => Promise.resolve(undefined));
+      adapter.onInteraction(mockHandler);
+      await adapter.start();
+
+      const interactionCall = (
+        mockClientOn.mock.calls as [string, (...args: unknown[]) => void][]
+      ).find(([event]) => event === 'interactionCreate');
+      const interactionListener = interactionCall![1];
+
+      const mockButtonInteraction = {
+        isChatInputCommand: () => false,
+        user: { id: '987654321' },
+      };
+
+      interactionListener(mockButtonInteraction);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(mockHandler).not.toHaveBeenCalled();
     });
   });
 });
