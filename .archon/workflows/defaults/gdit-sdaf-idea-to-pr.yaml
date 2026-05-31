@@ -18,6 +18,7 @@ description: |
   11. Final summary
 
   NOT for: Executing existing specs (use gdit-sdaf-plan-to-pr), quick fixes.
+  Offline variant (no GitHub/GitLab required): gdit-sdaf-idea-to-validated
 provider: claude
 model: sonnet
 

@@ -104,10 +104,15 @@ git remote get-url origin
 
 ### 2.2 Determine Repository Info
 
-Extract owner/repo from the remote URL for PR creation:
+Extract owner/repo from the remote URL for PR creation. Falls back to parsing the remote URL when `gh` is unavailable or unauthenticated (safe for local/offline use):
 
 ```bash
-gh repo view --json nameWithOwner -q .nameWithOwner
+REPO_INFO=$(gh auth status >/dev/null 2>&1 \
+  && gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null \
+  || git remote get-url origin 2>/dev/null \
+     | sed 's|.*github\.com[/:]||;s|.*gitlab\.com[/:]||;s|\.git$||' \
+  || echo "unknown/unknown")
+echo "Repo: $REPO_INFO"
 ```
 
 ### 2.3 Branch Decision
@@ -135,9 +140,15 @@ Evaluate in order (first matching case wins):
 
 ### 2.4 Sync with Remote
 
+Skip this step if the remote is unreachable (local/offline workflows set `worktree.enabled: false` to skip the Archon-level fetch, but this command also guards itself):
+
 ```bash
-git fetch origin
-git rebase origin/$BASE_BRANCH || git merge origin/$BASE_BRANCH
+if git ls-remote --exit-code origin HEAD >/dev/null 2>&1; then
+  git fetch origin
+  git rebase origin/$BASE_BRANCH || git merge origin/$BASE_BRANCH
+else
+  echo "Remote unreachable — skipping fetch/rebase. Working from local branch state."
+fi
 ```
 
 If conflicts occur, STOP with error: "Merge conflicts with $BASE_BRANCH. Resolve manually."

@@ -22,9 +22,15 @@ description: |
   - Create PR: gh pr create --base $BASE_BRANCH --body-file $ARTIFACTS_DIR/.pr-body.md
 
   For full automation including PR creation, use gdit-sdaf-idea-to-pr instead.
+  Online variant (with PR automation): gdit-sdaf-idea-to-pr
 
 provider: claude
 model: sonnet
+
+# Run in the live checkout without worktree isolation to avoid git fetch from remote.
+# This makes the workflow fully offline-capable (no GitHub/GitLab connection needed).
+worktree:
+  enabled: false
 
 nodes:
   # ═══════════════════════════════════════════════════════════════════
@@ -181,14 +187,14 @@ nodes:
   # PHASE 8: SYNTHESIZE + FIX
   # ═══════════════════════════════════════════════════════════════════
   - id: synthesize
-    command: archon-synthesize-review
+    command: archon-synthesize-review-local
     depends_on:
       [code-review, error-handling, test-coverage, comment-quality, docs-impact, gdit-audit]
     trigger_rule: one_success
     context: fresh
 
   - id: implement-fixes
-    command: archon-implement-review-fixes
+    command: archon-implement-review-fixes-local
     depends_on: [synthesize]
     context: fresh
 

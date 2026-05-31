@@ -199,14 +199,14 @@ nodes:
   # PHASE 8: SYNTHESIZE + FIX
   # ═══════════════════════════════════════════════════════════════════
   - id: synthesize
-    command: archon-synthesize-review
+    command: archon-synthesize-review-local
     depends_on:
       [code-review, error-handling, test-coverage, comment-quality, docs-impact, gdit-audit]
     trigger_rule: one_success
     context: fresh
 
   - id: implement-fixes
-    command: archon-implement-review-fixes
+    command: archon-implement-review-fixes-local
     depends_on: [synthesize]
     context: fresh
 

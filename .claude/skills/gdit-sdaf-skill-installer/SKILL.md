@@ -1,21 +1,25 @@
 ---
 name: skill-installer
-description: Install skills from GitHub, GitLab, or local paths into ~/.kiro/skills. Use when a user asks to list installable skills, install a skill from a registry, or install from a local directory.
+description: Install skills from GitHub or local paths into ~/.kiro/skills. Use when a user asks to list installable skills, install a skill from a GitHub registry, or install from a local directory. Note: GitLab is not yet implemented.
 metadata:
-  short-description: Install skills from GitHub, GitLab, or local paths
+  short-description: Install skills from GitHub or local paths (GitLab not yet implemented)
 ---
 
 # Skill Installer
 
 Install skills from multiple sources into `~/.kiro/skills/`.
 
+> **Offline / air-gapped use**: Use `install-skill-from-local.py` with a pre-downloaded skill directory — it has no network dependencies at all.
+>
+> **GitLab**: Not yet implemented. `install-skill-from-github.py` only supports `github.com` and public GitHub Enterprise mirrors via the `GITHUB_API_BASE_URL` env var.
+
 ## Supported Sources
 
-| Source | Script | Example |
-|--------|--------|---------|
-| GitHub repo | `install-skill-from-github.py` | `--repo org/repo --path skills/my-skill` |
-| GitHub URL | `install-skill-from-github.py` | `--url https://github.com/org/repo/tree/main/skills/my-skill` |
-| Local path | `install-skill-from-local.py` | `./path/to/my-skill` |
+| Source | Script | Example | Network required? |
+|--------|--------|---------|-------------------|
+| GitHub repo | `install-skill-from-github.py` | `--repo org/repo --path skills/my-skill` | Yes |
+| GitHub URL | `install-skill-from-github.py` | `--url https://github.com/org/repo/tree/main/skills/my-skill` | Yes |
+| Local path | `install-skill-from-local.py` | `./path/to/my-skill` | No |
 
 ## Usage
 
