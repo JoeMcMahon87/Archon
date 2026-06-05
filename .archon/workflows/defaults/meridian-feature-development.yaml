@@ -1,0 +1,192 @@
+name: meridian-feature-development
+description: |
+  Use when: Implementing a feature from an existing plan.
+  Input: Path to a plan file ($ARTIFACTS_DIR/plan.md) or GitHub issue containing a plan.
+  Does: Implements the plan with validation loops -> creates pull request.
+  NOT for: Creating plans (plans should be created separately), bug fixes, code reviews.
+
+nodes:
+  # ═══════════════════════════════════════════════════════════════
+  # METRICS: record wall-clock start (runs in parallel with estimate)
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: record-start
+    bash: |
+      mkdir -p "$ARTIFACTS_DIR"
+      date -u +"%Y-%m-%dT%H:%M:%SZ" > "$ARTIFACTS_DIR/.started-at"
+      echo "Run started at $(cat "$ARTIFACTS_DIR/.started-at")"
+
+  - id: implement
+    command: meridian-implement
+    provider: claude
+    model: opus[1m]
+
+  - id: create-pr
+    command: meridian-create-pr
+    depends_on: [implement]
+    context: fresh
+
+  - id: verify-pr-base
+    bash: |
+      set -euo pipefail
+      EXPECTED="$BASE_BRANCH"
+      BRANCH=$(git branch --show-current)
+      if [ "$FORGE_PROVIDER" = "gitlab" ]; then
+        MR_DATA=$(glab mr list --source-branch "$BRANCH" --output json --limit 1 2>/dev/null || echo "[]")
+        ACTUAL=$(echo "$MR_DATA" | jq -r '.[0].target_branch // empty')
+        if [ -n "$ACTUAL" ] && [ "$ACTUAL" != "$EXPECTED" ]; then
+          MR_IID=$(echo "$MR_DATA" | jq -r '.[0].iid')
+          echo "Base mismatch on MR !$MR_IID: expected=$EXPECTED actual=$ACTUAL — re-targeting" >&2
+          glab mr update "$MR_IID" --target-branch "$EXPECTED"
+        else
+          echo "MR base verified: ${ACTUAL:-$EXPECTED}"
+        fi
+      else
+        ACTUAL=$(gh pr view --json baseRefName -q '.baseRefName' 2>/dev/null || echo "")
+        if [ -n "$ACTUAL" ] && [ "$ACTUAL" != "$EXPECTED" ]; then
+          PR_NUMBER=$(gh pr view --json number -q '.number')
+          echo "Base mismatch on PR #$PR_NUMBER: expected=$EXPECTED actual=$ACTUAL — re-targeting" >&2
+          gh pr edit "$PR_NUMBER" --base "$EXPECTED"
+        else
+          echo "PR base verified: ${ACTUAL:-$EXPECTED}"
+        fi
+      fi
+    depends_on: [create-pr]
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE FINAL: PERSIST METRICS
+  # Writes granular run data to .meridian/metrics/ for estimation
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: persist-metrics
+    depends_on: [verify-pr-base]
+    trigger_rule: all_done
+    bash: |
+      set -euo pipefail
+      REPO_ROOT=$(git rev-parse --show-toplevel)
+      METRICS_DIR="$REPO_ROOT/.meridian/metrics"
+      RUNS_DIR="$METRICS_DIR/runs"
+      mkdir -p "$RUNS_DIR/$WORKFLOW_ID"
+
+      COMPLETED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      MONTH=$(date +%Y-%m)
+
+      # Wall-clock duration
+      WALL_CLOCK_MS="null"
+      if [ -f "$ARTIFACTS_DIR/.started-at" ]; then
+        STARTED_AT=$(cat "$ARTIFACTS_DIR/.started-at")
+        START_EPOCH=$(date -d "$STARTED_AT" +%s 2>/dev/null || echo "")
+        [ -n "$START_EPOCH" ] && WALL_CLOCK_MS=$(( ($(date -u +%s) - START_EPOCH) * 1000 ))
+      else
+        STARTED_AT=""
+      fi
+
+      # Issue and PR identifiers
+      ISSUE_NUMBER="null"
+      PR_NUMBER="null"
+      PR_URL="null"
+      ISSUE_URL="null"
+
+      if [ -f "$ARTIFACTS_DIR/.issue-number" ]; then
+        N=$(cat "$ARTIFACTS_DIR/.issue-number" | tr -d '[:space:]')
+        [[ "$N" =~ ^[0-9]+$ ]] && ISSUE_NUMBER="$N"
+      fi
+      if [ -f "$ARTIFACTS_DIR/.pr-number" ]; then
+        N=$(cat "$ARTIFACTS_DIR/.pr-number" | tr -d '[:space:]')
+        [[ "$N" =~ ^[0-9]+$ ]] && PR_NUMBER="$N"
+      fi
+      [ -f "$ARTIFACTS_DIR/.pr-url" ]    && PR_URL=""$(cat "$ARTIFACTS_DIR/.pr-url"    | tr -d '[:space:]')""
+      [ -f "$ARTIFACTS_DIR/.issue-url" ] && ISSUE_URL=""$(cat "$ARTIFACTS_DIR/.issue-url" | tr -d '[:space:]')""
+
+      # Classification (written by save-classification node when present)
+      CLASSIFICATION_JSON="{}"
+      [ -f "$ARTIFACTS_DIR/classification.json" ] && \
+        CLASSIFICATION_JSON=$(cat "$ARTIFACTS_DIR/classification.json" | jq -c '.' 2>/dev/null || echo "{}")
+
+      # Validation status
+      VALIDATION_PASSED="null"
+      if [ -f "$ARTIFACTS_DIR/validation.md" ]; then
+        if grep -qiE "all checks pass|validation.*passed|exit 0|✓" "$ARTIFACTS_DIR/validation.md" 2>/dev/null; then
+          VALIDATION_PASSED="true"
+        else
+          VALIDATION_PASSED="false"
+        fi
+      fi
+
+      # Outcome: success if PR was created OR implementation artifacts exist
+      OUTCOME="success"
+      if [ "$PR_NUMBER" = "null" ] && \
+         [ ! -f "$ARTIFACTS_DIR/implementation.md" ] && \
+         [ ! -f "$ARTIFACTS_DIR/plan.md" ]; then
+        OUTCOME="failed"
+      fi
+
+      # Codebase fingerprint
+      REPO=$(git remote get-url origin 2>/dev/null | \
+             sed 's|.*github\.com[:/]||;s|.*gitlab\.com[:/]||;s|\.git$||' || echo "")
+      COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "")
+      BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+
+      RECORD=$(jq -n \
+        --argjson schema_version 1 \
+        --arg run_id            "$WORKFLOW_ID" \
+        --arg workflow          "$WORKFLOW_NAME" \
+        --arg started_at        "${STARTED_AT:-}" \
+        --arg completed_at      "$COMPLETED_AT" \
+        --argjson wall_clock_ms "$WALL_CLOCK_MS" \
+        --arg outcome           "$OUTCOME" \
+        --argjson issue_number  "$ISSUE_NUMBER" \
+        --argjson pr_number     "$PR_NUMBER" \
+        --argjson pr_url        "$PR_URL" \
+        --argjson issue_url     "$ISSUE_URL" \
+        --argjson validation_passed "$VALIDATION_PASSED" \
+        --argjson classification "$CLASSIFICATION_JSON" \
+        --arg repo              "$REPO" \
+        --arg commit            "$COMMIT" \
+        --arg branch            "$BRANCH" \
+        '{
+          schema_version: $schema_version,
+          run_id: $run_id,
+          workflow: $workflow,
+          started_at: (if $started_at == "" then null else $started_at end),
+          completed_at: $completed_at,
+          wall_clock_ms: $wall_clock_ms,
+          outcome: $outcome,
+          issue_number: $issue_number,
+          pr_number: $pr_number,
+          pr_url: $pr_url,
+          issue_url: $issue_url,
+          total_usd: null,
+          tokens_in: null,
+          tokens_out: null,
+          tokens_cache_read: null,
+          tokens_cache_write: null,
+          validation_passed: $validation_passed,
+          classification: $classification,
+          codebase_fingerprint: {
+            repo: $repo,
+            commit: $commit,
+            branch: $branch
+          },
+          outcome_followup: {
+            pr_merged: null,
+            pr_merged_at: null,
+            pr_review_comments: null,
+            ci_passed: null,
+            reverted: null
+          }
+        }')
+
+      # Write per-run metrics.json (used by meridian-metrics-reconcile)
+      echo "$RECORD" | jq '.' > "$RUNS_DIR/$WORKFLOW_ID/metrics.json"
+      [ -f "$ARTIFACTS_DIR/.pr-number" ] && cp "$ARTIFACTS_DIR/.pr-number" "$RUNS_DIR/$WORKFLOW_ID/.pr-number"
+      [ -f "$ARTIFACTS_DIR/.pr-url" ]    && cp "$ARTIFACTS_DIR/.pr-url"    "$RUNS_DIR/$WORKFLOW_ID/.pr-url"
+
+      # Append compact row to monthly JSONL (read by estimate node)
+      echo "$RECORD" | jq -c '.' >> "$METRICS_DIR/runs-$MONTH.jsonl"
+
+      echo "Metrics persisted:"
+      echo "  Run JSON : $RUNS_DIR/$WORKFLOW_ID/metrics.json"
+      echo "  Monthly  : $METRICS_DIR/runs-$MONTH.jsonl"
+      printf "  Outcome  : %s | Issue: %s | PR: %s | Duration: %sms\n" \
+        "$OUTCOME" "$ISSUE_NUMBER" "$PR_NUMBER" "$WALL_CLOCK_MS"

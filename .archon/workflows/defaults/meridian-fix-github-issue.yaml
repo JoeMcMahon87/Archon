@@ -1,0 +1,588 @@
+name: meridian-fix-github-issue
+description: |
+  Use when: User wants to FIX, RESOLVE, or IMPLEMENT a solution for a forge issue (GitHub or GitLab).
+  Triggers: "fix this issue", "implement issue #123", "resolve this bug", "fix it",
+            "fix issue", "resolve issue", "fix #123".
+  NOT for: Comprehensive multi-agent reviews (use meridian-issue-review-full),
+           questions about issues, CI failures, PR reviews, general exploration.
+
+  Works with both GitHub (uses gh CLI) and GitLab (uses glab CLI).
+  Forge is auto-detected from the git remote URL, or set forge.provider in .archon/config.yaml.
+
+  DAG workflow that:
+  1. Classifies the issue (bug/feature/enhancement/etc)
+  2. Researches context (web research + codebase exploration via investigate/plan)
+  3. Routes to investigate (bugs) or plan (features) based on classification
+  4. Implements the fix/feature with validation
+  5. Creates a draft PR/MR using the repo's PR/MR template
+  6. Runs smart review (always code review + CLAUDE.md check, conditional additional agents)
+  7. Aggressively self-fixes all findings (tests, docs, error handling)
+  8. Simplifies changed code (implements fixes directly, not just reports)
+  9. Reports results back to the issue with follow-up suggestions
+
+provider: claude
+model: sonnet
+
+nodes:
+  # ═══════════════════════════════════════════════════════════════
+  # METRICS: record wall-clock start (runs in parallel with estimate)
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: record-start
+    bash: |
+      mkdir -p "$ARTIFACTS_DIR"
+      date -u +"%Y-%m-%dT%H:%M:%SZ" > "$ARTIFACTS_DIR/.started-at"
+      echo "Run started at $(cat "$ARTIFACTS_DIR/.started-at")"
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 0: EFFORT ESTIMATE (runs in parallel with issue fetch)
+  # Informational only — no downstream node depends on this.
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: estimate
+    bash: |
+      set -euo pipefail
+      METRICS_DIR="$(git rev-parse --show-toplevel)/.meridian/metrics"
+
+      if ! command -v jq &>/dev/null; then
+        exit 0
+      fi
+
+      JSONL_FILES=()
+      while IFS= read -r -d '' f; do
+        JSONL_FILES+=("$f")
+      done < <(find "$METRICS_DIR" -maxdepth 1 -name 'runs-*.jsonl' -print0 2>/dev/null | sort -z)
+
+      if [ ${#JSONL_FILES[@]} -eq 0 ]; then
+        exit 0
+      fi
+
+      FILTERED=$(cat "${JSONL_FILES[@]}" | jq -c --arg w "$WORKFLOW_NAME" 'select(.workflow == $w)')
+
+      if [ -z "$FILTERED" ]; then
+        exit 0
+      fi
+
+      RUN_COUNT=$(echo "$FILTERED" | wc -l | tr -d ' ')
+
+      echo "$FILTERED" | jq -sc --arg n "$RUN_COUNT" '
+        def percentile(arr; p):
+          (arr | sort) as $s | ($s | length) as $len |
+          if $len == 0 then null else $s[($len * p / 100 | floor | if . >= $len then $len - 1 else . end)] end;
+        . as $runs |
+        ($runs | length) as $count |
+        ($runs | map(select(.outcome == "success")) | length) as $ok |
+        ($runs | map(.wall_clock_ms | select(. != null))) as $clocks |
+        ($runs | map(.total_usd | select(. != null and . > 0))) as $costs |
+        {
+          workflow: $runs[0].workflow,
+          run_count: $count,
+          success_rate_pct: (if $count > 0 then ($ok / $count * 100 | round) else 0 end),
+          wall_clock_p50_ms: (percentile($clocks; 50)),
+          wall_clock_p90_ms: (percentile($clocks; 90)),
+          cost_p50_usd: (percentile($costs; 50)),
+          cost_p90_usd: (percentile($costs; 90)),
+          validation_pass_rate_pct: (
+            ($runs | map(select(.validation_passed != null)) | length) as $vcount |
+            if $vcount > 0 then
+              ($runs | map(select(.validation_passed == true)) | length) / $vcount * 100 | round
+            else null end),
+          tokens_in_p50:  (percentile([$runs[] | .tokens_in  | select(. != null)]; 50)),
+          tokens_out_p50: (percentile([$runs[] | .tokens_out | select(. != null)]; 50)),
+          issues_fixed:   ($runs | map(select(.issue_number != null)) | length),
+          prs_created:    ($runs | map(select(.pr_number    != null)) | length)
+        }
+      '
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 1: FETCH & CLASSIFY
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: extract-issue-number
+    prompt: |
+      Find the GitHub issue number for this request.
+
+      Request: $ARGUMENTS
+
+      Rules:
+      - If the message contains an explicit issue number (e.g., "#709", "issue 709", "709"), extract that number.
+      - If the message is ambiguous (e.g., "fix the SQLite timestamp bug"):
+          - GitHub: use `gh issue list` to search for matching issues and pick the best match.
+          - GitLab: use `glab issue list --search "..."` to search for matching issues.
+
+      CRITICAL: Your final output must be ONLY the bare number with no quotes, no markdown, no explanation. Example correct output: 709
+
+  - id: fetch-issue
+    bash: |
+      # Strip quotes, whitespace, markdown backticks from AI output
+      ISSUE_NUM=$(echo "$extract-issue-number.output" | tr -d "'\"\`\n " | grep -oE '[0-9]+' | head -1)
+      if [ -z "$ISSUE_NUM" ]; then
+        echo "Failed to extract issue number from: $extract-issue-number.output" >&2
+        exit 1
+      fi
+      # Persist issue number for metrics collection
+      mkdir -p "$ARTIFACTS_DIR"
+      echo "$ISSUE_NUM" > "$ARTIFACTS_DIR/.issue-number"
+      if [ "$FORGE_PROVIDER" = "gitlab" ]; then
+        ISSUE_DATA=$(glab issue view "$ISSUE_NUM" --output json)
+        echo "$ISSUE_DATA" | jq -r '.web_url // ""' > "$ARTIFACTS_DIR/.issue-url"
+      else
+        ISSUE_DATA=$(gh issue view "$ISSUE_NUM" --json title,body,labels,comments,state,url,author)
+        echo "$ISSUE_DATA" | jq -r '.url // ""' > "$ARTIFACTS_DIR/.issue-url"
+      fi
+      echo "$ISSUE_DATA"
+    depends_on: [extract-issue-number]
+
+  - id: classify
+    prompt: |
+      You are an issue classifier. Analyze the GitHub issue below and determine its type.
+
+      ## Issue Content
+
+      $fetch-issue.output
+
+      ## Classification Rules
+
+      | Type | Indicators |
+      |------|------------|
+      | bug | "broken", "error", "crash", "doesn't work", stack traces, regression |
+      | feature | "add", "new", "support", "would be nice", net-new capability |
+      | enhancement | "improve", "better", "update existing", "extend", incremental improvement |
+      | refactor | "clean up", "simplify", "reorganize", "restructure" |
+      | chore | "update deps", "upgrade", "maintenance", "CI/CD" |
+      | documentation | "docs", "readme", "clarify", "examples" |
+
+      Provide reasoning for your classification.
+    depends_on: [fetch-issue]
+    model: haiku
+    allowed_tools: []
+    output_format:
+      type: object
+      properties:
+        issue_type:
+          type: string
+          enum: ["bug", "feature", "enhancement", "refactor", "chore", "documentation"]
+        title:
+          type: string
+        reasoning:
+          type: string
+      required: [issue_type, title, reasoning]
+
+  # Save classification JSON for metrics collection
+  - id: save-classification
+    bash: |
+      mkdir -p "$ARTIFACTS_DIR"
+      printf '%s\n' '$classify.output' > "$ARTIFACTS_DIR/classification.json"
+    depends_on: [classify]
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 2: RESEARCH (parallel with PR template fetch)
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: web-research
+    command: meridian-web-research
+    depends_on: [classify]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 3: INVESTIGATE (bugs) / PLAN (features)
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: investigate
+    command: meridian-investigate-issue
+    depends_on: [classify, web-research]
+    when: "$classify.output.issue_type == 'bug'"
+    context: fresh
+
+  - id: plan
+    command: meridian-create-plan
+    depends_on: [classify, web-research]
+    when: "$classify.output.issue_type != 'bug'"
+    context: fresh
+
+  # Bridge: ensure investigation.md exists for the implement step
+  # meridian-fix-issue reads from $ARTIFACTS_DIR/investigation.md
+  # meridian-create-plan writes to $ARTIFACTS_DIR/plan.md
+  # This node copies plan.md → investigation.md when the plan path was taken
+  - id: bridge-artifacts
+    bash: |
+      if [ -f "$ARTIFACTS_DIR/plan.md" ] && [ ! -f "$ARTIFACTS_DIR/investigation.md" ]; then
+        cp "$ARTIFACTS_DIR/plan.md" "$ARTIFACTS_DIR/investigation.md"
+        echo "Bridged plan.md to investigation.md for implement step"
+      elif [ -f "$ARTIFACTS_DIR/investigation.md" ]; then
+        echo "investigation.md exists from investigate step"
+      else
+        echo "WARNING: No investigation.md or plan.md found — implement may fail"
+      fi
+    depends_on: [investigate, plan]
+    trigger_rule: one_success
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 4: IMPLEMENT
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: implement
+    command: meridian-fix-issue
+    depends_on: [bridge-artifacts]
+    context: fresh
+    model: opus[1m]
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 5: VALIDATE
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: validate
+    command: meridian-validate
+    depends_on: [implement]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 6: CREATE DRAFT PR
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: create-pr
+    prompt: |
+      Create a draft pull request for the current branch.
+
+      ## Context
+
+      - **Issue**: $ARGUMENTS
+      - **Classification**: $classify.output
+      - **Issue title**: $classify.output.title
+
+      ## Instructions
+
+      1. Check git status. If uncommitted changes exist, stage and commit ONLY source files that are part of the fix:
+         - List them by name with `git add <path1> <path2> ...` — never `git add -A`, `git add .`, or `git add -u`
+         - **Never commit** scratch / review / PR-body artifacts, even if they appear in `git status`:
+           - `.pr-body.md`, `pr-body.md`, `*.scratch.md`, `*.tmp.md` at any path
+           - `review/`, `*-report.md` at the repo root
+           - Anything under `$ARTIFACTS_DIR`
+         - Verify with `git status --porcelain` that nothing scratch is staged before committing
+         - If files you don't recognize as part of the fix appear modified or untracked, leave them alone
+      2. Push the branch: `git push -u origin HEAD`
+      3. Read implementation artifacts from `$ARTIFACTS_DIR/` for context:
+         - `$ARTIFACTS_DIR/investigation.md` or `$ARTIFACTS_DIR/plan.md`
+         - `$ARTIFACTS_DIR/implementation.md`
+         - `$ARTIFACTS_DIR/validation.md`
+      4. Check if a PR/MR already exists for this branch:
+         - GitHub: `gh pr list --head $(git branch --show-current)`
+         - GitLab: `glab mr list --source-branch $(git branch --show-current)`
+         - If a PR/MR exists, skip creation and capture its identifier
+      5. Look for the project's PR/MR template:
+         - GitHub: `.github/pull_request_template.md`, `.github/PULL_REQUEST_TEMPLATE.md`, or `docs/PULL_REQUEST_TEMPLATE.md`
+         - GitLab: `.gitlab/merge_request_templates/Default.md` or similar
+         Read whichever one exists.
+      6. Create a DRAFT PR/MR:
+         - GitHub: `gh pr create --draft --base $BASE_BRANCH`
+         - GitLab: `glab mr create --draft --target-branch $BASE_BRANCH`
+         - Title: concise, imperative mood, under 70 chars
+         - Body/description: if a template was found, fill in **every section** with details from the artifacts. Don't skip sections or leave placeholders. If no template, write a body with summary, changes, validation evidence, and `Fixes #...` / `Closes #...`.
+         - **Body file location**: if you write the body to a file, the file MUST live at `$ARTIFACTS_DIR/pr-body.md` or under `/tmp/` — NEVER inside the worktree.
+         - Link to issue: include `Fixes #<N>` or `Closes #<N>`
+      7. Capture PR/MR identifiers:
+         ```bash
+         # GitHub
+         PR_NUMBER=$(gh pr view --json number -q '.number')
+         echo "$PR_NUMBER" > "$ARTIFACTS_DIR/.pr-number"
+         PR_URL=$(gh pr view --json url -q '.url')
+         echo "$PR_URL" > "$ARTIFACTS_DIR/.pr-url"
+         # GitLab
+         MR_IID=$(glab mr list --source-branch $(git branch --show-current) --output json | jq -r '.[0].iid')
+         echo "$MR_IID" > "$ARTIFACTS_DIR/.pr-number"
+         MR_URL=$(glab mr list --source-branch $(git branch --show-current) --output json | jq -r '.[0].web_url')
+         echo "$MR_URL" > "$ARTIFACTS_DIR/.pr-url"
+         ```
+    depends_on: [validate]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 7: REVIEW
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: verify-pr-base
+    bash: |
+      set -euo pipefail
+      EXPECTED="$BASE_BRANCH"
+      BRANCH=$(git branch --show-current)
+      if [ "$FORGE_PROVIDER" = "gitlab" ]; then
+        MR_DATA=$(glab mr list --source-branch "$BRANCH" --output json --limit 1 2>/dev/null || echo "[]")
+        ACTUAL=$(echo "$MR_DATA" | jq -r '.[0].target_branch // empty')
+        if [ -n "$ACTUAL" ] && [ "$ACTUAL" != "$EXPECTED" ]; then
+          MR_IID=$(echo "$MR_DATA" | jq -r '.[0].iid')
+          echo "Base mismatch on MR !$MR_IID: expected=$EXPECTED actual=$ACTUAL — re-targeting" >&2
+          glab mr update "$MR_IID" --target-branch "$EXPECTED"
+        else
+          echo "MR base verified: ${ACTUAL:-$EXPECTED}"
+        fi
+      else
+        ACTUAL=$(gh pr view --json baseRefName -q '.baseRefName' 2>/dev/null || echo "")
+        if [ -n "$ACTUAL" ] && [ "$ACTUAL" != "$EXPECTED" ]; then
+          PR_NUMBER=$(gh pr view --json number -q '.number')
+          echo "Base mismatch on PR #$PR_NUMBER: expected=$EXPECTED actual=$ACTUAL — re-targeting" >&2
+          gh pr edit "$PR_NUMBER" --base "$EXPECTED"
+        else
+          echo "PR base verified: ${ACTUAL:-$EXPECTED}"
+        fi
+      fi
+    depends_on: [create-pr]
+
+  - id: review-scope
+    command: meridian-pr-review-scope
+    depends_on: [verify-pr-base]
+    context: fresh
+
+  - id: review-classify
+    prompt: |
+      You are a PR review classifier. Analyze the PR scope and determine
+      which review agents should run.
+
+      ## PR Scope
+
+      $review-scope.output
+
+      ## Rules
+
+      - **Code review**: ALWAYS run. This is mandatory for every PR. It also checks
+        the PR against CLAUDE.md rules and project conventions.
+      - **Error handling**: Run if the diff touches code with try/catch, error handling,
+        async/await, or adds new failure paths.
+      - **Test coverage**: Run if the diff touches source code (not just tests, docs, or config).
+      - **Comment quality**: Run if the diff adds or modifies comments, docstrings, JSDoc,
+        or significant documentation within code files.
+      - **Docs impact**: Run if the diff adds/removes/renames public APIs, commands, CLI flags,
+        environment variables, or user-facing features.
+
+      Provide your reasoning for each decision.
+    depends_on: [review-scope]
+    model: haiku
+    allowed_tools: []
+    context: fresh
+    output_format:
+      type: object
+      properties:
+        run_code_review:
+          type: string
+          enum: ["true", "false"]
+        run_error_handling:
+          type: string
+          enum: ["true", "false"]
+        run_test_coverage:
+          type: string
+          enum: ["true", "false"]
+        run_comment_quality:
+          type: string
+          enum: ["true", "false"]
+        run_docs_impact:
+          type: string
+          enum: ["true", "false"]
+        reasoning:
+          type: string
+      required:
+        - run_code_review
+        - run_error_handling
+        - run_test_coverage
+        - run_comment_quality
+        - run_docs_impact
+        - reasoning
+
+  # Code review always runs — mandatory
+  - id: code-review
+    command: meridian-code-review-agent
+    depends_on: [review-classify]
+    context: fresh
+
+  - id: error-handling
+    command: meridian-error-handling-agent
+    depends_on: [review-classify]
+    when: "$review-classify.output.run_error_handling == 'true'"
+    context: fresh
+
+  - id: test-coverage
+    command: meridian-test-coverage-agent
+    depends_on: [review-classify]
+    when: "$review-classify.output.run_test_coverage == 'true'"
+    context: fresh
+
+  - id: comment-quality
+    command: meridian-comment-quality-agent
+    depends_on: [review-classify]
+    when: "$review-classify.output.run_comment_quality == 'true'"
+    context: fresh
+
+  - id: docs-impact
+    command: meridian-docs-impact-agent
+    depends_on: [review-classify]
+    when: "$review-classify.output.run_docs_impact == 'true'"
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 8: SYNTHESIZE + SELF-FIX
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: synthesize
+    command: meridian-synthesize-review
+    depends_on: [code-review, error-handling, test-coverage, comment-quality, docs-impact]
+    trigger_rule: one_success
+    context: fresh
+
+  - id: self-fix
+    command: meridian-self-fix-all
+    depends_on: [synthesize]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 9: SIMPLIFY
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: simplify
+    command: meridian-simplify-changes
+    depends_on: [self-fix]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 10: REPORT
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: report
+    command: meridian-issue-completion-report
+    depends_on: [simplify]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE FINAL: PERSIST METRICS
+  # Writes granular run data to .meridian/metrics/ for estimation
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: persist-metrics
+    depends_on: [report]
+    trigger_rule: all_done
+    bash: |
+      set -euo pipefail
+      REPO_ROOT=$(git rev-parse --show-toplevel)
+      METRICS_DIR="$REPO_ROOT/.meridian/metrics"
+      RUNS_DIR="$METRICS_DIR/runs"
+      mkdir -p "$RUNS_DIR/$WORKFLOW_ID"
+
+      COMPLETED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      MONTH=$(date +%Y-%m)
+
+      # Wall-clock duration
+      WALL_CLOCK_MS="null"
+      if [ -f "$ARTIFACTS_DIR/.started-at" ]; then
+        STARTED_AT=$(cat "$ARTIFACTS_DIR/.started-at")
+        START_EPOCH=$(date -d "$STARTED_AT" +%s 2>/dev/null || echo "")
+        [ -n "$START_EPOCH" ] && WALL_CLOCK_MS=$(( ($(date -u +%s) - START_EPOCH) * 1000 ))
+      else
+        STARTED_AT=""
+      fi
+
+      # Issue and PR identifiers
+      ISSUE_NUMBER="null"
+      PR_NUMBER="null"
+      PR_URL="null"
+      ISSUE_URL="null"
+
+      if [ -f "$ARTIFACTS_DIR/.issue-number" ]; then
+        N=$(cat "$ARTIFACTS_DIR/.issue-number" | tr -d '[:space:]')
+        [[ "$N" =~ ^[0-9]+$ ]] && ISSUE_NUMBER="$N"
+      fi
+      if [ -f "$ARTIFACTS_DIR/.pr-number" ]; then
+        N=$(cat "$ARTIFACTS_DIR/.pr-number" | tr -d '[:space:]')
+        [[ "$N" =~ ^[0-9]+$ ]] && PR_NUMBER="$N"
+      fi
+      [ -f "$ARTIFACTS_DIR/.pr-url" ]    && PR_URL=""$(cat "$ARTIFACTS_DIR/.pr-url"    | tr -d '[:space:]')""
+      [ -f "$ARTIFACTS_DIR/.issue-url" ] && ISSUE_URL=""$(cat "$ARTIFACTS_DIR/.issue-url" | tr -d '[:space:]')""
+
+      # Classification (written by save-classification node when present)
+      CLASSIFICATION_JSON="{}"
+      [ -f "$ARTIFACTS_DIR/classification.json" ] && \
+        CLASSIFICATION_JSON=$(cat "$ARTIFACTS_DIR/classification.json" | jq -c '.' 2>/dev/null || echo "{}")
+
+      # Validation status
+      VALIDATION_PASSED="null"
+      if [ -f "$ARTIFACTS_DIR/validation.md" ]; then
+        if grep -qiE "all checks pass|validation.*passed|exit 0|✓" "$ARTIFACTS_DIR/validation.md" 2>/dev/null; then
+          VALIDATION_PASSED="true"
+        else
+          VALIDATION_PASSED="false"
+        fi
+      fi
+
+      # Outcome: success if PR was created OR implementation artifacts exist
+      OUTCOME="success"
+      if [ "$PR_NUMBER" = "null" ] && \
+         [ ! -f "$ARTIFACTS_DIR/implementation.md" ] && \
+         [ ! -f "$ARTIFACTS_DIR/plan.md" ]; then
+        OUTCOME="failed"
+      fi
+
+      # Codebase fingerprint
+      REPO=$(git remote get-url origin 2>/dev/null | \
+             sed 's|.*github\.com[:/]||;s|.*gitlab\.com[:/]||;s|\.git$||' || echo "")
+      COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "")
+      BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+
+      RECORD=$(jq -n \
+        --argjson schema_version 1 \
+        --arg run_id            "$WORKFLOW_ID" \
+        --arg workflow          "$WORKFLOW_NAME" \
+        --arg started_at        "${STARTED_AT:-}" \
+        --arg completed_at      "$COMPLETED_AT" \
+        --argjson wall_clock_ms "$WALL_CLOCK_MS" \
+        --arg outcome           "$OUTCOME" \
+        --argjson issue_number  "$ISSUE_NUMBER" \
+        --argjson pr_number     "$PR_NUMBER" \
+        --argjson pr_url        "$PR_URL" \
+        --argjson issue_url     "$ISSUE_URL" \
+        --argjson validation_passed "$VALIDATION_PASSED" \
+        --argjson classification "$CLASSIFICATION_JSON" \
+        --arg repo              "$REPO" \
+        --arg commit            "$COMMIT" \
+        --arg branch            "$BRANCH" \
+        '{
+          schema_version: $schema_version,
+          run_id: $run_id,
+          workflow: $workflow,
+          started_at: (if $started_at == "" then null else $started_at end),
+          completed_at: $completed_at,
+          wall_clock_ms: $wall_clock_ms,
+          outcome: $outcome,
+          issue_number: $issue_number,
+          pr_number: $pr_number,
+          pr_url: $pr_url,
+          issue_url: $issue_url,
+          total_usd: null,
+          tokens_in: null,
+          tokens_out: null,
+          tokens_cache_read: null,
+          tokens_cache_write: null,
+          validation_passed: $validation_passed,
+          classification: $classification,
+          codebase_fingerprint: {
+            repo: $repo,
+            commit: $commit,
+            branch: $branch
+          },
+          outcome_followup: {
+            pr_merged: null,
+            pr_merged_at: null,
+            pr_review_comments: null,
+            ci_passed: null,
+            reverted: null
+          }
+        }')
+
+      # Write per-run metrics.json (used by meridian-metrics-reconcile)
+      echo "$RECORD" | jq '.' > "$RUNS_DIR/$WORKFLOW_ID/metrics.json"
+      [ -f "$ARTIFACTS_DIR/.pr-number" ] && cp "$ARTIFACTS_DIR/.pr-number" "$RUNS_DIR/$WORKFLOW_ID/.pr-number"
+      [ -f "$ARTIFACTS_DIR/.pr-url" ]    && cp "$ARTIFACTS_DIR/.pr-url"    "$RUNS_DIR/$WORKFLOW_ID/.pr-url"
+
+      # Append compact row to monthly JSONL (read by estimate node)
+      echo "$RECORD" | jq -c '.' >> "$METRICS_DIR/runs-$MONTH.jsonl"
+
+      echo "Metrics persisted:"
+      echo "  Run JSON : $RUNS_DIR/$WORKFLOW_ID/metrics.json"
+      echo "  Monthly  : $METRICS_DIR/runs-$MONTH.jsonl"
+      printf "  Outcome  : %s | Issue: %s | PR: %s | Duration: %sms\n" \
+        "$OUTCOME" "$ISSUE_NUMBER" "$PR_NUMBER" "$WALL_CLOCK_MS"

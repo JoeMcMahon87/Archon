@@ -9,11 +9,11 @@ Fixed all immediate portability blockers across 5 GDIT-SDAF workflows to enable 
 
 ## Workflows Fixed
 
-1. ✅ **gdit-sdaf-compliance-report** - Now fully portable
-2. ✅ **gdit-sdaf-idea-to-pr** - Now fully portable
-3. ✅ **gdit-sdaf-plan-to-pr** - Now fully portable
-4. ✅ **gdit-sdaf-security-scan** - Now fully portable with tool validation
-5. ✅ **gdit-sdaf-setup** - Now fully portable
+1. ✅ **compliance-report** - Now fully portable
+2. ✅ **meridian-idea-to-pr-sdaf** - Now fully portable
+3. ✅ **meridian-plan-to-pr-sdaf** - Now fully portable
+4. ✅ **security-scan** - Now fully portable with tool validation
+5. ✅ **setup** - Now fully portable
 
 ## Critical Fixes Applied
 
@@ -28,8 +28,8 @@ Fixed all immediate portability blockers across 5 GDIT-SDAF workflows to enable 
 if [ ! -f "$HOME/.kiro/scripts/validate-spec.py" ]; then
 
 # After:
-ARCHON_HOME="${ARCHON_HOME:-$HOME/.archon}"
-if [ ! -f "$ARCHON_HOME/scripts/gdit-sdaf/validate-spec.py" ]; then
+MERIDIAN_HOME="$(git rev-parse --show-toplevel)/.meridian"
+if [ ! -f "$MERIDIAN_HOME/scripts/validate-spec.py" ]; then
 ```
 
 **Files Changed**:
@@ -45,13 +45,13 @@ if [ ! -f "$ARCHON_HOME/scripts/gdit-sdaf/validate-spec.py" ]; then
 **Fix**: Changed to correct `fresh_context: true` syntax per schema:
 
 **Affected Workflows**:
-- `gdit-sdaf-compliance-report` (save-report node)
-- `gdit-sdaf-idea-to-pr` (18 nodes)
-- `gdit-sdaf-plan-to-pr` (14 nodes)
-- `gdit-sdaf-security-scan` (report node)
-- `gdit-sdaf-setup` (init-project-config node)
+- `compliance-report` (save-report node)
+- `meridian-idea-to-pr-sdaf` (18 nodes)
+- `meridian-plan-to-pr-sdaf` (14 nodes)
+- `security-scan` (report node)
+- `setup` (init-project-config node)
 
-### 3. Missing Python Script Handling (gdit-sdaf-compliance-report)
+### 3. Missing Python Script Handling (compliance-report)
 
 **Issue**: Referenced 3 Python scripts that didn't exist:
 - `coverage_matrix.py`
@@ -64,7 +64,7 @@ if [ ! -f "$ARCHON_HOME/scripts/gdit-sdaf/validate-spec.py" ]; then
 - Don't fail workflow execution
 - Preserve the node structure for future implementation
 
-### 4. Security Tool Validation (gdit-sdaf-security-scan)
+### 4. Security Tool Validation (security-scan)
 
 **Issue**: Workflow silently failed or produced incomplete results when security tools were missing.
 
@@ -95,7 +95,7 @@ fi
 - Workflow continues with available tools
 - No silent failures
 
-### 5. File Existence Checks (gdit-sdaf-setup)
+### 5. File Existence Checks (setup)
 
 **Issue**: Bash glob patterns (`*.py`, `*.sh`) would fail if no matching files existed.
 
@@ -109,7 +109,7 @@ else
 fi
 ```
 
-### 6. Directory Reference Updates (gdit-sdaf-setup)
+### 6. Directory Reference Updates (setup)
 
 **Issue**: Node ID references still pointed to old `copy-kiro-*` names after refactoring.
 
@@ -122,12 +122,12 @@ fi
 All workflows now pass Archon's built-in validation:
 
 ```bash
-$ bun run cli validate workflows gdit-sdaf-*
-✓ gdit-sdaf-compliance-report    ok
-✓ gdit-sdaf-idea-to-pr           ok
-✓ gdit-sdaf-plan-to-pr           ok
-✓ gdit-sdaf-security-scan        ok
-✓ gdit-sdaf-setup                ok
+$ bun run cli validate workflows *
+✓ compliance-report    ok
+✓ meridian-idea-to-pr-sdaf           ok
+✓ meridian-plan-to-pr-sdaf           ok
+✓ security-scan        ok
+✓ setup                ok
 
 Results: 5 valid, 0 with errors
 ```
@@ -141,12 +141,12 @@ Users can now install these workflows into any project:
 archon doctor
 
 # 2. Run the setup workflow (one-time per project)
-archon workflow run gdit-sdaf-setup
+archon workflow run setup
 
 # 3. Use any GDIT workflow
-archon workflow run gdit-sdaf-idea-to-pr "Add dark mode feature"
-archon workflow run gdit-sdaf-plan-to-pr .archon/specs/feature-name/
-archon workflow run gdit-sdaf-security-scan
+archon workflow run meridian-idea-to-pr-sdaf "Add dark mode feature"
+archon workflow run meridian-plan-to-pr-sdaf .archon/specs/feature-name/
+archon workflow run security-scan
 ```
 
 ## Remaining Considerations
@@ -162,7 +162,7 @@ These can be implemented incrementally without breaking existing workflows.
 
 ### External Tool Dependencies
 
-**gdit-sdaf-security-scan** requires (but gracefully degrades without):
+**security-scan** requires (but gracefully degrades without):
 - `gitleaks` - Secret detection
 - `semgrep` - SAST scanning
 - `trivy` - Vulnerability scanning
@@ -174,9 +174,9 @@ Installation guidance is provided in workflow output when tools are missing.
 
 Before deploying to production:
 
-1. **Fresh Installation Test**: Run `gdit-sdaf-setup` on a clean machine
-2. **Tool-less Test**: Run `gdit-sdaf-security-scan` without scanners installed
-3. **Spec Creation**: Run `gdit-sdaf-idea-to-pr` with a simple feature request
+1. **Fresh Installation Test**: Run `setup` on a clean machine
+2. **Tool-less Test**: Run `security-scan` without scanners installed
+3. **Spec Creation**: Run `meridian-idea-to-pr-sdaf` with a simple feature request
 4. **Cross-platform**: Test on Linux, macOS, and Windows (WSL)
 
 ## Migration Guide
@@ -188,7 +188,7 @@ For users with existing `~/.kiro/` installations:
 cp -r ~/.kiro ~/.kiro.backup
 
 # 2. Run the new setup (creates ~/.archon/)
-archon workflow run gdit-sdaf-setup
+archon workflow run setup
 
 # 3. Optionally remove old installation
 rm -rf ~/.kiro
@@ -210,5 +210,5 @@ This ensures the fixed workflows are available in:
 ---
 
 **Verified By**: Claude Sonnet 4.5  
-**Validation Command**: `bun run cli validate workflows gdit-sdaf-*`  
+**Validation Command**: `bun run cli validate workflows *`  
 **All Checks**: ✅ PASSING

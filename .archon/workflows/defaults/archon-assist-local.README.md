@@ -1,10 +1,10 @@
-# archon-assist-local
+# meridian-assist-local
 
-A local-only variant of `archon-assist` designed for offline work or environments without GitHub/GitLab access.
+A local-only variant of `meridian-assist` designed for offline work or environments without GitHub/GitLab access.
 
 ## Purpose
 
-Use `archon-assist-local` when you need general assistance but:
+Use `meridian-assist-local` when you need general assistance but:
 - You're working offline
 - You don't have GitHub/GitLab CLI authentication configured
 - You want to ensure no forge API calls are made
@@ -35,13 +35,13 @@ Invoke directly or let the router match your request:
 
 ```bash
 # Via CLI
-archon workflow run archon-assist-local "Explain how the database migrations work"
+archon workflow run meridian-assist-local "Explain how the database migrations work"
 
 # Via chat platforms (Slack, Telegram, etc.)
-/workflow archon-assist-local Refactor the auth module for clarity
+/workflow meridian-assist-local Refactor the auth module for clarity
 ```
 
-## When to Use Standard archon-assist Instead
+## When to Use Standard meridian-assist Instead
 
 If your task requires:
 - Creating or updating pull requests
@@ -49,10 +49,10 @@ If your task requires:
 - Running `gh` or `glab` commands
 - Checking CI status via forge APIs
 
-...use the standard `archon-assist` workflow instead.
+...use the standard `meridian-assist` workflow instead.
 
 ## Technical Notes
 
 - Runs in the live checkout (`worktree.enabled: false`)
-- Uses the `archon-assist-local` command which includes explicit forge-blocking instructions
+- Uses the `meridian-assist-local` command which includes explicit forge-blocking instructions
 - Bundled as a default workflow (no `.archon/workflows/` setup needed)

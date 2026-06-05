@@ -1,0 +1,370 @@
+name: meridian-idea-to-pr
+description: |
+  Use when: You have a feature idea or description and want end-to-end development.
+  Input: Feature description in natural language, or path to a PRD file
+  Output: PR ready for merge with comprehensive review completed
+
+  Full workflow:
+  1. Create comprehensive implementation plan with codebase analysis
+  2. Setup branch and extract scope limits
+  3. Verify plan research is still valid
+  4. Implement all tasks with type-checking
+  5. Run full validation suite
+  6. Create PR with template, mark ready
+  7. Comprehensive code review (5 parallel agents with scope limit awareness)
+  8. Synthesize and fix review findings
+  9. Final summary with decision matrix -> GitHub comment + follow-up recommendations
+
+  NOT for: Executing existing plans (use meridian-plan-to-pr), quick fixes, standalone reviews.
+
+nodes:
+  # ═══════════════════════════════════════════════════════════════
+  # METRICS: record wall-clock start (runs in parallel with estimate)
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: record-start
+    bash: |
+      mkdir -p "$ARTIFACTS_DIR"
+      date -u +"%Y-%m-%dT%H:%M:%SZ" > "$ARTIFACTS_DIR/.started-at"
+      echo "Run started at $(cat "$ARTIFACTS_DIR/.started-at")"
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PHASE 0a: PRE-RUN ESTIMATE (informational, runs in parallel)
+  # ═══════════════════════════════════════════════════════════════════
+  - id: estimate
+    bash: |
+      set -euo pipefail
+      METRICS_DIR="$(git rev-parse --show-toplevel)/.meridian/metrics"
+
+      if ! command -v jq &>/dev/null; then
+        exit 0
+      fi
+
+      JSONL_FILES=()
+      while IFS= read -r -d '' f; do
+        JSONL_FILES+=("$f")
+      done < <(find "$METRICS_DIR" -maxdepth 1 -name 'runs-*.jsonl' -print0 2>/dev/null | sort -z)
+
+      if [ ${#JSONL_FILES[@]} -eq 0 ]; then
+        exit 0
+      fi
+
+      FILTERED=$(cat "${JSONL_FILES[@]}" | jq -c --arg w "$WORKFLOW_NAME" 'select(.workflow == $w)')
+
+      if [ -z "$FILTERED" ]; then
+        exit 0
+      fi
+
+      RUN_COUNT=$(echo "$FILTERED" | wc -l | tr -d ' ')
+
+      echo "$FILTERED" | jq -sc --arg n "$RUN_COUNT" '
+        def percentile(arr; p):
+          (arr | sort) as $s | ($s | length) as $len |
+          if $len == 0 then null else $s[($len * p / 100 | floor | if . >= $len then $len - 1 else . end)] end;
+        . as $runs |
+        ($runs | length) as $count |
+        ($runs | map(select(.outcome == "success")) | length) as $ok |
+        ($runs | map(.wall_clock_ms | select(. != null))) as $clocks |
+        ($runs | map(.total_usd | select(. != null and . > 0))) as $costs |
+        {
+          workflow: $runs[0].workflow,
+          run_count: $count,
+          success_rate_pct: (if $count > 0 then ($ok / $count * 100 | round) else 0 end),
+          wall_clock_p50_ms: (percentile($clocks; 50)),
+          wall_clock_p90_ms: (percentile($clocks; 90)),
+          cost_p50_usd: (percentile($costs; 50)),
+          cost_p90_usd: (percentile($costs; 90)),
+          validation_pass_rate_pct: (
+            ($runs | map(select(.validation_passed != null)) | length) as $vcount |
+            if $vcount > 0 then
+              ($runs | map(select(.validation_passed == true)) | length) / $vcount * 100 | round
+            else null end),
+          tokens_in_p50:  (percentile([$runs[] | .tokens_in  | select(. != null)]; 50)),
+          tokens_out_p50: (percentile([$runs[] | .tokens_out | select(. != null)]; 50)),
+          issues_fixed:   ($runs | map(select(.issue_number != null)) | length),
+          prs_created:    ($runs | map(select(.pr_number    != null)) | length)
+        }
+      '
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PHASE 0: CREATE PLAN
+  # ═══════════════════════════════════════════════════════════════════
+
+  - id: create-plan
+    command: meridian-create-plan
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PHASE 1: SETUP
+  # ═══════════════════════════════════════════════════════════════════
+
+  - id: plan-setup
+    command: meridian-plan-setup
+    depends_on: [create-plan]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PHASE 2: CONFIRM PLAN
+  # ═══════════════════════════════════════════════════════════════════
+
+  - id: confirm-plan
+    command: meridian-confirm-plan
+    depends_on: [plan-setup]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PHASE 3: IMPLEMENT
+  # ═══════════════════════════════════════════════════════════════════
+
+  - id: implement-tasks
+    command: meridian-implement-tasks
+    depends_on: [confirm-plan]
+    context: fresh
+    provider: claude
+    model: opus[1m]
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PHASE 4: VALIDATE
+  # ═══════════════════════════════════════════════════════════════════
+
+  - id: validate
+    command: meridian-validate
+    depends_on: [implement-tasks]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PHASE 5: FINALIZE PR
+  # ═══════════════════════════════════════════════════════════════════
+
+  - id: finalize-pr
+    command: meridian-finalize-pr
+    depends_on: [validate]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PHASE 6: CODE REVIEW
+  # ═══════════════════════════════════════════════════════════════════
+
+  - id: verify-pr-base
+    bash: |
+      set -euo pipefail
+      EXPECTED="$BASE_BRANCH"
+      BRANCH=$(git branch --show-current)
+      if [ "$FORGE_PROVIDER" = "gitlab" ]; then
+        MR_DATA=$(glab mr list --source-branch "$BRANCH" --output json --limit 1 2>/dev/null || echo "[]")
+        ACTUAL=$(echo "$MR_DATA" | jq -r '.[0].target_branch // empty')
+        if [ -n "$ACTUAL" ] && [ "$ACTUAL" != "$EXPECTED" ]; then
+          MR_IID=$(echo "$MR_DATA" | jq -r '.[0].iid')
+          echo "Base mismatch on MR !$MR_IID: expected=$EXPECTED actual=$ACTUAL — re-targeting" >&2
+          glab mr update "$MR_IID" --target-branch "$EXPECTED"
+        else
+          echo "MR base verified: ${ACTUAL:-$EXPECTED}"
+        fi
+      else
+        ACTUAL=$(gh pr view --json baseRefName -q '.baseRefName' 2>/dev/null || echo "")
+        if [ -n "$ACTUAL" ] && [ "$ACTUAL" != "$EXPECTED" ]; then
+          PR_NUMBER=$(gh pr view --json number -q '.number')
+          echo "Base mismatch on PR #$PR_NUMBER: expected=$EXPECTED actual=$ACTUAL — re-targeting" >&2
+          gh pr edit "$PR_NUMBER" --base "$EXPECTED"
+        else
+          echo "PR base verified: ${ACTUAL:-$EXPECTED}"
+        fi
+      fi
+    depends_on: [finalize-pr]
+
+  - id: review-scope
+    command: meridian-pr-review-scope
+    depends_on: [verify-pr-base]
+    context: fresh
+
+  - id: sync
+    command: meridian-sync-pr-with-main
+    depends_on: [review-scope]
+    context: fresh
+
+  - id: code-review
+    command: meridian-code-review-agent
+    depends_on: [sync]
+    context: fresh
+
+  - id: error-handling
+    command: meridian-error-handling-agent
+    depends_on: [sync]
+    context: fresh
+
+  - id: test-coverage
+    command: meridian-test-coverage-agent
+    depends_on: [sync]
+    context: fresh
+
+  - id: comment-quality
+    command: meridian-comment-quality-agent
+    depends_on: [sync]
+    context: fresh
+
+  - id: docs-impact
+    command: meridian-docs-impact-agent
+    depends_on: [sync]
+    context: fresh
+
+  - id: synthesize
+    command: meridian-synthesize-review
+    depends_on: [code-review, error-handling, test-coverage, comment-quality, docs-impact]
+    trigger_rule: one_success
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PHASE 7: FIX REVIEW ISSUES
+  # ═══════════════════════════════════════════════════════════════════
+
+  - id: implement-fixes
+    command: meridian-implement-review-fixes
+    depends_on: [synthesize]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PHASE 8: FINAL SUMMARY & FOLLOW-UP
+  # ═══════════════════════════════════════════════════════════════════
+
+  - id: workflow-summary
+    command: meridian-workflow-summary
+    depends_on: [implement-fixes]
+    context: fresh
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE FINAL: PERSIST METRICS
+  # Writes granular run data to .meridian/metrics/ for estimation
+  # ═══════════════════════════════════════════════════════════════
+
+  - id: persist-metrics
+    depends_on: [workflow-summary]
+    trigger_rule: all_done
+    bash: |
+      set -euo pipefail
+      REPO_ROOT=$(git rev-parse --show-toplevel)
+      METRICS_DIR="$REPO_ROOT/.meridian/metrics"
+      RUNS_DIR="$METRICS_DIR/runs"
+      mkdir -p "$RUNS_DIR/$WORKFLOW_ID"
+
+      COMPLETED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      MONTH=$(date +%Y-%m)
+
+      # Wall-clock duration
+      WALL_CLOCK_MS="null"
+      if [ -f "$ARTIFACTS_DIR/.started-at" ]; then
+        STARTED_AT=$(cat "$ARTIFACTS_DIR/.started-at")
+        START_EPOCH=$(date -d "$STARTED_AT" +%s 2>/dev/null || echo "")
+        [ -n "$START_EPOCH" ] && WALL_CLOCK_MS=$(( ($(date -u +%s) - START_EPOCH) * 1000 ))
+      else
+        STARTED_AT=""
+      fi
+
+      # Issue and PR identifiers
+      ISSUE_NUMBER="null"
+      PR_NUMBER="null"
+      PR_URL="null"
+      ISSUE_URL="null"
+
+      if [ -f "$ARTIFACTS_DIR/.issue-number" ]; then
+        N=$(cat "$ARTIFACTS_DIR/.issue-number" | tr -d '[:space:]')
+        [[ "$N" =~ ^[0-9]+$ ]] && ISSUE_NUMBER="$N"
+      fi
+      if [ -f "$ARTIFACTS_DIR/.pr-number" ]; then
+        N=$(cat "$ARTIFACTS_DIR/.pr-number" | tr -d '[:space:]')
+        [[ "$N" =~ ^[0-9]+$ ]] && PR_NUMBER="$N"
+      fi
+      [ -f "$ARTIFACTS_DIR/.pr-url" ]    && PR_URL=""$(cat "$ARTIFACTS_DIR/.pr-url"    | tr -d '[:space:]')""
+      [ -f "$ARTIFACTS_DIR/.issue-url" ] && ISSUE_URL=""$(cat "$ARTIFACTS_DIR/.issue-url" | tr -d '[:space:]')""
+
+      # Classification (written by save-classification node when present)
+      CLASSIFICATION_JSON="{}"
+      [ -f "$ARTIFACTS_DIR/classification.json" ] && \
+        CLASSIFICATION_JSON=$(cat "$ARTIFACTS_DIR/classification.json" | jq -c '.' 2>/dev/null || echo "{}")
+
+      # Validation status
+      VALIDATION_PASSED="null"
+      if [ -f "$ARTIFACTS_DIR/validation.md" ]; then
+        if grep -qiE "all checks pass|validation.*passed|exit 0|✓" "$ARTIFACTS_DIR/validation.md" 2>/dev/null; then
+          VALIDATION_PASSED="true"
+        else
+          VALIDATION_PASSED="false"
+        fi
+      fi
+
+      # Outcome: success if PR was created OR implementation artifacts exist
+      OUTCOME="success"
+      if [ "$PR_NUMBER" = "null" ] && \
+         [ ! -f "$ARTIFACTS_DIR/implementation.md" ] && \
+         [ ! -f "$ARTIFACTS_DIR/plan.md" ]; then
+        OUTCOME="failed"
+      fi
+
+      # Codebase fingerprint
+      REPO=$(git remote get-url origin 2>/dev/null | \
+             sed 's|.*github\.com[:/]||;s|.*gitlab\.com[:/]||;s|\.git$||' || echo "")
+      COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "")
+      BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+
+      RECORD=$(jq -n \
+        --argjson schema_version 1 \
+        --arg run_id            "$WORKFLOW_ID" \
+        --arg workflow          "$WORKFLOW_NAME" \
+        --arg started_at        "${STARTED_AT:-}" \
+        --arg completed_at      "$COMPLETED_AT" \
+        --argjson wall_clock_ms "$WALL_CLOCK_MS" \
+        --arg outcome           "$OUTCOME" \
+        --argjson issue_number  "$ISSUE_NUMBER" \
+        --argjson pr_number     "$PR_NUMBER" \
+        --argjson pr_url        "$PR_URL" \
+        --argjson issue_url     "$ISSUE_URL" \
+        --argjson validation_passed "$VALIDATION_PASSED" \
+        --argjson classification "$CLASSIFICATION_JSON" \
+        --arg repo              "$REPO" \
+        --arg commit            "$COMMIT" \
+        --arg branch            "$BRANCH" \
+        '{
+          schema_version: $schema_version,
+          run_id: $run_id,
+          workflow: $workflow,
+          started_at: (if $started_at == "" then null else $started_at end),
+          completed_at: $completed_at,
+          wall_clock_ms: $wall_clock_ms,
+          outcome: $outcome,
+          issue_number: $issue_number,
+          pr_number: $pr_number,
+          pr_url: $pr_url,
+          issue_url: $issue_url,
+          total_usd: null,
+          tokens_in: null,
+          tokens_out: null,
+          tokens_cache_read: null,
+          tokens_cache_write: null,
+          validation_passed: $validation_passed,
+          classification: $classification,
+          codebase_fingerprint: {
+            repo: $repo,
+            commit: $commit,
+            branch: $branch
+          },
+          outcome_followup: {
+            pr_merged: null,
+            pr_merged_at: null,
+            pr_review_comments: null,
+            ci_passed: null,
+            reverted: null
+          }
+        }')
+
+      # Write per-run metrics.json (used by meridian-metrics-reconcile)
+      echo "$RECORD" | jq '.' > "$RUNS_DIR/$WORKFLOW_ID/metrics.json"
+      [ -f "$ARTIFACTS_DIR/.pr-number" ] && cp "$ARTIFACTS_DIR/.pr-number" "$RUNS_DIR/$WORKFLOW_ID/.pr-number"
+      [ -f "$ARTIFACTS_DIR/.pr-url" ]    && cp "$ARTIFACTS_DIR/.pr-url"    "$RUNS_DIR/$WORKFLOW_ID/.pr-url"
+
+      # Append compact row to monthly JSONL (read by estimate node)
+      echo "$RECORD" | jq -c '.' >> "$METRICS_DIR/runs-$MONTH.jsonl"
+
+      echo "Metrics persisted:"
+      echo "  Run JSON : $RUNS_DIR/$WORKFLOW_ID/metrics.json"
+      echo "  Monthly  : $METRICS_DIR/runs-$MONTH.jsonl"
+      printf "  Outcome  : %s | Issue: %s | PR: %s | Duration: %sms\n" \
+        "$OUTCOME" "$ISSUE_NUMBER" "$PR_NUMBER" "$WALL_CLOCK_MS"

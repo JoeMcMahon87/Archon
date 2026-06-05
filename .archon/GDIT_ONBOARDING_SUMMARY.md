@@ -11,7 +11,7 @@ Implemented a comprehensive, single-command onboarding solution for GDIT-SDAF wo
 
 ### 1. New Onboarding Workflow
 
-**File**: `.archon/workflows/defaults/gdit-sdaf-onboard.yaml`
+**File**: `.archon/workflows/defaults/onboard.yaml`
 
 **Purpose**: Master orchestration workflow that handles complete GDIT-SDAF setup.
 
@@ -33,9 +33,9 @@ Implemented a comprehensive, single-command onboarding solution for GDIT-SDAF wo
 4. `check-forge-cli` - Verify gh/glab CLI and authentication
 5. `check-python` - Validate Python 3.12+
 6. `install-scanners` - Install security tools via pip
-7. `copy-gdit-scripts` - Copy Python scripts to ~/.archon/scripts/gdit-sdaf/
+7. `copy-gdit-scripts` - Copy Python scripts to ~/.archon/scripts/meridian/
 8. `install-gdit-skills` - Install skills to ~/.archon/skills/ (without prefix)
-9. `init-project-config` - Create .archon/config/project.yaml
+9. `init-project-config` - Create .meridian/config/project.yaml
 10. `verify-setup` - Generate comprehensive status report
 
 ### 2. Python Configuration Script
@@ -83,7 +83,7 @@ Multiple manual steps required:
 1. Run `archon setup` for basic configuration
 2. Manually edit `.archon/config.yaml` to set forge provider
 3. Install Python security scanners individually
-4. Run `archon workflow run gdit-sdaf-setup`
+4. Run `archon workflow run setup`
 5. Manually verify each component
 6. No clear guidance on forge CLI authentication
 
@@ -93,7 +93,7 @@ Multiple manual steps required:
 
 Single command:
 ```bash
-archon workflow run gdit-sdaf-onboard
+archon workflow run onboard
 ```
 
 **Time**: 5-10 minutes (first run), 1 minute (verification re-run)  
@@ -115,7 +115,7 @@ docs:
   path: docs/
 ```
 
-### `.archon/config/project.yaml` (GDIT-specific)
+### `.meridian/config/project.yaml` (GDIT-specific)
 
 Created by workflow with GDIT settings:
 ```yaml
@@ -168,12 +168,12 @@ All workflows validate successfully:
 
 | Workflow | Status |
 |----------|--------|
-| gdit-sdaf-onboard | ✅ Valid (1 warning: uv runtime - expected) |
-| gdit-sdaf-setup | ✅ Valid |
-| gdit-sdaf-security-scan | ✅ Valid |
-| gdit-sdaf-compliance-report | ✅ Valid |
-| gdit-sdaf-idea-to-pr | ✅ Valid |
-| gdit-sdaf-plan-to-pr | ✅ Valid |
+| onboard | ✅ Valid (1 warning: uv runtime - expected) |
+| setup | ✅ Valid |
+| security-scan | ✅ Valid |
+| compliance-report | ✅ Valid |
+| meridian-idea-to-pr-sdaf | ✅ Valid |
+| meridian-plan-to-pr-sdaf | ✅ Valid |
 
 **Total**: 6 workflows, all validated
 
@@ -181,7 +181,7 @@ All workflows validate successfully:
 
 Regenerated with new workflow:
 - **42 commands**
-- **28 workflows** (including gdit-sdaf-onboard)
+- **28 workflows** (including onboard)
 
 Verified with `bun run check:bundled` - all up to date.
 
@@ -263,7 +263,7 @@ For users with existing `.kiro/` installations:
 cp -r ~/.kiro ~/.kiro.backup
 
 # 2. Run new onboarding
-archon workflow run gdit-sdaf-onboard
+archon workflow run onboard
 
 # 3. Remove old (optional)
 rm -rf ~/.kiro
@@ -287,12 +287,12 @@ After running onboarding:
 
 3. **Run first workflow**:
    ```bash
-   archon workflow run gdit-sdaf-security-scan
+   archon workflow run security-scan
    ```
 
 4. **Full development lifecycle**:
    ```bash
-   archon workflow run gdit-sdaf-idea-to-pr "Add feature"
+   archon workflow run meridian-idea-to-pr-sdaf "Add feature"
    ```
 
 ## Benefits
@@ -338,7 +338,7 @@ After running onboarding:
 ## Files Changed
 
 ### Added
-1. `.archon/workflows/defaults/gdit-sdaf-onboard.yaml` - Master onboarding workflow
+1. `.archon/workflows/defaults/onboard.yaml` - Master onboarding workflow
 2. `.archon/scripts/write-forge-config.py` - YAML config writer
 3. `GDIT_ONBOARDING.md` - User documentation
 4. `.archon/GDIT_ONBOARDING_SUMMARY.md` - This file
@@ -348,18 +348,18 @@ After running onboarding:
 
 ### Verified
 All 6 GDIT workflows validated:
-- `gdit-sdaf-onboard`
-- `gdit-sdaf-setup`
-- `gdit-sdaf-security-scan`
-- `gdit-sdaf-compliance-report`
-- `gdit-sdaf-idea-to-pr`
-- `gdit-sdaf-plan-to-pr`
+- `onboard`
+- `setup`
+- `security-scan`
+- `compliance-report`
+- `meridian-idea-to-pr-sdaf`
+- `meridian-plan-to-pr-sdaf`
 
 ## Conclusion
 
 The GDIT-SDAF onboarding implementation provides a comprehensive, production-ready solution for new developer onboarding. The workflow is:
 
-- ✅ **Single command** - `archon workflow run gdit-sdaf-onboard`
+- ✅ **Single command** - `archon workflow run onboard`
 - ✅ **Fully automated** - Forge detection, config creation, dependency checks
 - ✅ **Idempotent** - Safe to re-run for verification or updates
 - ✅ **Well documented** - 500+ lines of user-facing docs
