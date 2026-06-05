@@ -162,15 +162,20 @@ export class SlackWorkflowBridge {
         case 'workflow_cancelled':
           await this.onTerminal(event.runId, 'cancelled', conversationId, event.reason);
           break;
-        // Loop / tool / artifact events would surface as noise in-thread and
-        // aren't tied to a button or actionable state; the status message
-        // already conveys whether the run is healthy via the DAG node states.
+        // Informational-only events: loop/tool/artifact noise, telemetry, and
+        // metrics signals. None require a Slack action; the DAG status message
+        // already conveys run health.
         case 'loop_iteration_started':
         case 'loop_iteration_completed':
         case 'loop_iteration_failed':
         case 'tool_started':
         case 'tool_completed':
         case 'workflow_artifact':
+        case 'approval_resolved':
+        case 'retry_attempted':
+        case 'workflow_fingerprint':
+        case 'size_proxy_emitted':
+        case 'classifier_emitted':
           break;
         default: {
           const exhaustive: never = event;

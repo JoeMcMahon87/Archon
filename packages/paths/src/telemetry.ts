@@ -395,6 +395,7 @@ async function initClient(): Promise<PostHog | null> {
 
 export interface WorkflowInvokedProperties {
   workflowName: string;
+  workflowDescription?: string;
   platform?: string;
   archonVersion?: string;
 }
