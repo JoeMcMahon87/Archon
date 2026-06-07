@@ -31,7 +31,7 @@ import { syncWorkspace, toRepoPath } from '@archon/git';
 import type { WorkspaceSyncResult } from '@archon/git';
 import { discoverWorkflowsWithConfig } from '@archon/workflows/workflow-discovery';
 import { findWorkflow } from '@archon/workflows/router';
-import { executeWorkflow } from '@archon/workflows/executor';
+import { executeWorkflow, hydrateResumableRun } from '@archon/workflows/executor';
 import type {
   WorkflowDefinition,
   WorkflowWithSource,
@@ -384,8 +384,10 @@ async function dispatchOrchestratorWorkflow(
       },
       'orchestrator.foreground_resume_detected'
     );
-    // Pass the resumable run directly to executeWorkflow - it handles hydration internally
+    // Hydrate the resumable run before passing to executeWorkflow.
+    // Resume detection is the caller's responsibility; the executor no longer queries findResumableRun.
     const deps = createWorkflowDeps();
+    const hydrated = await hydrateResumableRun(deps, resumableRun);
     await executeWorkflow(
       deps,
       platform,
@@ -394,11 +396,14 @@ async function dispatchOrchestratorWorkflow(
       workflow,
       userMessage,
       conversation.id,
-      codebase.id,
-      undefined, // issueContext
-      undefined, // isolationContext
-      conversation.id, // parentConversationId
-      resumableRun // preCreatedRun
+      {
+        codebaseId: codebase.id,
+        issueContext: undefined,
+        isolationContext: undefined,
+        parentConversationId: conversation.id,
+        preCreatedRun: hydrated?.preCreatedRun ?? resumableRun,
+        priorCompletedNodes: hydrated?.priorCompletedNodes,
+      }
     );
   } else if (platform.getPlatformType() === 'web' && !workflow.interactive) {
     // Background dispatch: web-only, non-interactive workflows with no resumable run
@@ -426,10 +431,10 @@ async function dispatchOrchestratorWorkflow(
       workflow,
       userMessage,
       conversation.id,
-      codebase.id,
-      undefined, // issueContext
-      undefined, // isolationContext
-      conversation.id // parentConversationId
+      {
+        codebaseId: codebase.id,
+        parentConversationId: conversation.id,
+      }
     );
   }
 }

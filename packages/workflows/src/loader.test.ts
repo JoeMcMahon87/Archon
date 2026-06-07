@@ -861,10 +861,10 @@ nodes:
       const result = await discoverWorkflows(testDir, { loadDefaults: true });
       const workflows = result.workflows.map(ws => ws.workflow);
 
-      // Should load the real archon-* prefixed app defaults
+      // Should load the real meridian-* prefixed app defaults
       expect(workflows.length).toBeGreaterThanOrEqual(1);
       // Check for at least one of the known app defaults
-      const archonAssist = workflows.find(w => w.name === 'archon-assist');
+      const archonAssist = workflows.find(w => w.name === 'meridian-assist');
       expect(archonAssist).toBeDefined();
     });
 
@@ -873,33 +873,33 @@ nodes:
       const repoWorkflowDir = join(testDir, '.archon', 'workflows');
       await mkdir(repoWorkflowDir, { recursive: true });
       const repoWorkflowYaml = `name: my-custom-assist
-description: My custom assist (overrides archon-assist)
+description: My custom assist (overrides meridian-assist)
 nodes:
   - id: custom
     command: custom-command
 `;
       // Use exact same filename as app default to override
-      await writeFile(join(repoWorkflowDir, 'archon-assist.yaml'), repoWorkflowYaml);
+      await writeFile(join(repoWorkflowDir, 'meridian-assist.yaml'), repoWorkflowYaml);
 
       const result = await discoverWorkflows(testDir, { loadDefaults: true });
       const workflows = result.workflows.map(ws => ws.workflow);
 
       // Should have the repo version, not the app default
       const assistWorkflow = workflows.find(
-        w => w.name === 'my-custom-assist' || w.name === 'archon-assist'
+        w => w.name === 'my-custom-assist' || w.name === 'meridian-assist'
       );
       expect(assistWorkflow).toBeDefined();
       // Repo version should win (has custom name)
       expect(assistWorkflow?.name).toBe('my-custom-assist');
-      expect(assistWorkflow?.description).toBe('My custom assist (overrides archon-assist)');
+      expect(assistWorkflow?.description).toBe('My custom assist (overrides meridian-assist)');
     });
 
     it('should skip app defaults when loadDefaults is false', async () => {
       const result = await discoverWorkflows(testDir, { loadDefaults: false });
       const workflows = result.workflows.map(ws => ws.workflow);
 
-      // Should NOT find any archon-* workflows since app defaults are disabled
-      const archonWorkflow = workflows.find(w => w.name.startsWith('archon-'));
+      // Should NOT find any meridian-* workflows since app defaults are disabled
+      const archonWorkflow = workflows.find(w => w.name.startsWith('meridian-'));
       expect(archonWorkflow).toBeUndefined();
     });
 
@@ -919,7 +919,7 @@ nodes:
       const workflows = result.workflows.map(ws => ws.workflow);
 
       // Should have both app defaults and repo workflows
-      const archonAssist = workflows.find(w => w.name === 'archon-assist');
+      const archonAssist = workflows.find(w => w.name === 'meridian-assist');
       const customWorkflow = workflows.find(w => w.name === 'my-custom-workflow');
       expect(archonAssist).toBeDefined();
       expect(customWorkflow).toBeDefined();
@@ -1155,8 +1155,8 @@ nodes:
 
       const result = await discoverWorkflowsWithConfig(testDir, mockLoadConfig);
 
-      // With loadDefaults: false, no archon-* defaults should appear
-      const archonWorkflow = result.workflows.find(w => w.workflow.name.startsWith('archon-'));
+      // With loadDefaults: false, no meridian-* defaults should appear
+      const archonWorkflow = result.workflows.find(w => w.workflow.name.startsWith('meridian-'));
       expect(archonWorkflow).toBeUndefined();
       expect(mockLoadConfig).toHaveBeenCalledWith(testDir);
     });
@@ -1169,8 +1169,8 @@ nodes:
 
       const result = await discoverWorkflowsWithConfig(testDir, mockLoadConfig);
 
-      // With config failure, defaults to true, so archon-* should appear
-      const archonWorkflow = result.workflows.find(w => w.workflow.name === 'archon-assist');
+      // With config failure, defaults to true, so meridian-* should appear
+      const archonWorkflow = result.workflows.find(w => w.workflow.name === 'meridian-assist');
       expect(archonWorkflow).toBeDefined();
     });
 
@@ -1240,7 +1240,7 @@ nodes:
       // Should load bundled workflows
       expect(workflows.length).toBeGreaterThanOrEqual(1);
       // Check that known bundled workflows are loaded
-      const archonAssist = workflows.find(w => w.name === 'archon-assist');
+      const archonAssist = workflows.find(w => w.name === 'meridian-assist');
       expect(archonAssist).toBeDefined();
     });
 
@@ -1252,7 +1252,7 @@ nodes:
       const workflows = result.workflows.map(ws => ws.workflow);
 
       // Should not have any bundled defaults
-      const archonWorkflow = workflows.find(w => w.name.startsWith('archon-'));
+      const archonWorkflow = workflows.find(w => w.name.startsWith('meridian-'));
       expect(archonWorkflow).toBeUndefined();
     });
 
@@ -1264,19 +1264,19 @@ nodes:
       const repoWorkflowDir = join(testDir, '.archon', 'workflows');
       await mkdir(repoWorkflowDir, { recursive: true });
       const repoWorkflowYaml = `name: custom-assist-override
-description: Custom override of archon-assist
+description: Custom override of meridian-assist
 nodes:
   - id: custom
     command: custom
 `;
-      await writeFile(join(repoWorkflowDir, 'archon-assist.yaml'), repoWorkflowYaml);
+      await writeFile(join(repoWorkflowDir, 'meridian-assist.yaml'), repoWorkflowYaml);
 
       const result = await discoverWorkflows(testDir, { loadDefaults: true });
       const workflows = result.workflows.map(ws => ws.workflow);
 
       // Repo workflow should override bundled default
       const assistWorkflow = workflows.find(
-        w => w.name === 'custom-assist-override' || w.name === 'archon-assist'
+        w => w.name === 'custom-assist-override' || w.name === 'meridian-assist'
       );
       expect(assistWorkflow).toBeDefined();
       expect(assistWorkflow?.name).toBe('custom-assist-override');
@@ -1301,7 +1301,7 @@ nodes:
       const workflows = result.workflows.map(ws => ws.workflow);
 
       // Should have both bundled and repo workflows
-      const archonAssist = workflows.find(w => w.name === 'archon-assist');
+      const archonAssist = workflows.find(w => w.name === 'meridian-assist');
       const repoWorkflow = workflows.find(w => w.name === 'my-repo-workflow');
       expect(archonAssist).toBeDefined();
       expect(repoWorkflow).toBeDefined();

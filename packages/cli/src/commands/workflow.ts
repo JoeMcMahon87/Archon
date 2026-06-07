@@ -15,7 +15,7 @@ import { join } from 'node:path';
 import { createWorkflowDeps } from '@archon/core/workflows/store-adapter';
 import { discoverWorkflowsWithConfig } from '@archon/workflows/workflow-discovery';
 import { resolveWorkflowName } from '@archon/workflows/router';
-import { executeWorkflow } from '@archon/workflows/executor';
+import { executeWorkflow, hydrateResumableRun } from '@archon/workflows/executor';
 import {
   getWorkflowEventEmitter,
   type WorkflowEmitterEvent,
@@ -756,12 +756,42 @@ export async function workflowRunCommand(
     );
   }
 
-  // When --resume, pass the resumable run directly to executeWorkflow.
-  // Hydration is handled internally by the executor.
-  // The lookup-by-(workflowName, cwd) was already done above for worktree-path
-  // resolution; reuse that result rather than querying twice.
+  // Resolve resume state: caller's responsibility to hydrate before passing to executeWorkflow.
+  // For --resume: reuse the resumable run already found during worktree-path resolution.
+  // For fresh `workflow run`: auto-detect a prior resumable run at the working path.
   const deps = createWorkflowDeps();
-  const preCreatedRun = options.resume && resumable ? resumable : undefined;
+  let preCreatedRun: WorkflowRun | undefined;
+  let priorCompletedNodes: Map<string, string> | undefined;
+
+  if (options.resume && resumable) {
+    // Explicit --resume: hydrate the run found earlier during worktree resolution.
+    const hydrated = await hydrateResumableRun(deps, resumable);
+    if (hydrated) {
+      preCreatedRun = hydrated.preCreatedRun;
+      priorCompletedNodes = hydrated.priorCompletedNodes;
+    } else {
+      // No completed nodes or interactive-loop state — treat as fresh run at the same path
+      preCreatedRun = resumable;
+    }
+  } else if (!options.resume) {
+    // Auto-detect: check for a prior resumable run on same workflow + cwd
+    try {
+      const autoResumable = await deps.store.findResumableRun(workflowName, workingCwd);
+      if (autoResumable) {
+        const hydrated = await hydrateResumableRun(deps, autoResumable);
+        if (hydrated) {
+          preCreatedRun = hydrated.preCreatedRun;
+          priorCompletedNodes = hydrated.priorCompletedNodes;
+        }
+      }
+    } catch (error) {
+      getLog().warn(
+        { err: error as Error, workflowName, workingCwd },
+        'cli.workflow_auto_resume_check_failed'
+      );
+      // Non-fatal: fall through to fresh run
+    }
+  }
 
   // Execute workflow with workingCwd (may be worktree path)
   let result: Awaited<ReturnType<typeof executeWorkflow>>;
@@ -774,11 +804,11 @@ export async function workflowRunCommand(
       workflow,
       userMessage,
       conversation.id,
-      codebase?.id,
-      undefined, // issueContext
-      undefined, // isolationContext
-      undefined, // parentConversationId
-      preCreatedRun // preCreatedRun
+      {
+        codebaseId: codebase?.id,
+        preCreatedRun,
+        priorCompletedNodes,
+      }
     );
   } finally {
     unsubscribe?.();

@@ -468,7 +468,13 @@ export function substituteWorkflowVariables(
   rejectionReason?: string,
   loopPrevOutput?: string,
   forgeProvider?: 'github' | 'gitlab',
-  workflowName?: string
+  workflowName?: string,
+  /**
+   * When true, $USER_MESSAGE and $ARGUMENTS are NOT substituted into the text.
+   * Use for bash/script nodes where the value is passed as an env var instead —
+   * text substitution would allow shell injection via malicious user messages.
+   */
+  skipUserMessageSubstitution = false
 ): { prompt: string; contextSubstituted: boolean } {
   // Fail fast if the prompt references $BASE_BRANCH but no base branch could be resolved
   if (!baseBranch && prompt.includes('$BASE_BRANCH')) {
@@ -488,8 +494,8 @@ export function substituteWorkflowVariables(
   let result = prompt
     .replace(/\$WORKFLOW_ID/g, workflowId)
     .replace(/\$WORKFLOW_NAME/g, workflowName ?? '')
-    .replace(/\$USER_MESSAGE/g, userMessage)
-    .replace(/\$ARGUMENTS/g, userMessage)
+    .replace(/\$USER_MESSAGE/g, skipUserMessageSubstitution ? '$USER_MESSAGE' : userMessage)
+    .replace(/\$ARGUMENTS/g, skipUserMessageSubstitution ? '$ARGUMENTS' : userMessage)
     .replace(/\$ARTIFACTS_DIR/g, artifactsDir)
     .replace(/\$BASE_BRANCH/g, baseBranch)
     .replace(/\$DOCS_DIR/g, resolvedDocsDir)

@@ -4,7 +4,7 @@ description: >-
   dedup detection + 3-day auto-close) and cross-references open PRs against
   open issues (conservative: suggests Closes #X only when a PR fully
   addresses an issue, never closes anything itself). State is persisted
-  under .archon/state/ so prior runs are remembered. Designed for periodic
+  under .meridian/state/ so prior runs are remembered. Designed for periodic
   runs; safe to re-run; idempotent.
 interactive: false
 
@@ -85,7 +85,7 @@ nodes:
           state write), print a line prefixed `[DRY] would ...` with the
           full body you would have posted.
         - Do NOT run `gh issue (comment|close|edit)`. Do NOT use the Write
-          tool on `.archon/state/*.json`.
+          tool on `.meridian/state/*.json`.
         - When delegating via Task to triage-agent/brief-gen, PREPEND this
           exact sentence to every Task prompt:
               "DRY_RUN=1 is active. Do NOT apply labels or mutate the
@@ -104,7 +104,7 @@ nodes:
 
       # State file
 
-      Location: `.archon/state/triage-state.json` (relative to repo root).
+      Location: `.meridian/state/triage-state.json` (relative to repo root).
       Before reading or writing, ensure the directory exists:
 
           mkdir -p .archon/state
@@ -130,13 +130,13 @@ nodes:
 
       ## 1. Read state
       ```
-      cat .archon/state/triage-state.json 2>/dev/null
+      cat .meridian/state/triage-state.json 2>/dev/null
       ```
       Parse handling:
         - ENOENT (file missing) → start from default shape above.
         - Empty file (zero bytes / whitespace only) → start from default shape.
         - JSON.parse THROWS (corrupt state) → ABORT the node loudly.
-          Print: `[triage-issues] ABORT: .archon/state/triage-state.json
+          Print: `[triage-issues] ABORT: .meridian/state/triage-state.json
           is corrupt — refusing to reset tracked state. Restore from a
           backup (check git history if tracked, or a local timestamped
           copy) or delete the file to start fresh.`
@@ -280,7 +280,7 @@ nodes:
 
       ## 9. SAVE
       Set `state.lastRunAt = <now-iso>`. Use the Write tool to persist
-      `.archon/state/triage-state.json` as formatted JSON (2-space indent).
+      `.meridian/state/triage-state.json` as formatted JSON (2-space indent).
 
       ## 10. Summary output
       Print a single compact block:
@@ -378,7 +378,7 @@ nodes:
         - Do read-only work (gh list/view, state reads, clustering).
         - For every mutation (comment, close, state write), print `[DRY] would ...`.
         - Do NOT run gh issue comment/close.
-        - Do NOT use Write on `.archon/state/*.json`.
+        - Do NOT use Write on `.meridian/state/*.json`.
         - When spawning closed-brief-gen via Task, prepend to its prompt:
               "DRY_RUN=1 is active. Run only read-only gh commands."
         - End with a summary prefixed `## (DRY RUN) Closed-dedup check — <now>`.
@@ -386,7 +386,7 @@ nodes:
       # Context artifact from triage-issues
 
       Open-issue briefs live in:
-          .archon/state/triage-state.json
+          .meridian/state/triage-state.json
 
       Schema (written by the triage-issues node earlier in this run):
 
@@ -414,7 +414,7 @@ nodes:
       # State file (this node)
 
       Separate file to isolate concerns from triage-issues:
-          .archon/state/closed-dedup-state.json
+          .meridian/state/closed-dedup-state.json
 
       Default shape when missing:
 
@@ -433,8 +433,8 @@ nodes:
       # Step-by-step
 
       ## 1. Read both state files
-      - Read `.archon/state/triage-state.json` — grab `briefs` (open-issue briefs).
-      - Read `.archon/state/closed-dedup-state.json`:
+      - Read `.meridian/state/triage-state.json` — grab `briefs` (open-issue briefs).
+      - Read `.meridian/state/closed-dedup-state.json`:
           ENOENT / empty → default shape. JSON.parse throw → ABORT loudly
           (same rule as triage-issues step 1: never silently reset
           tracked state; corrupt file means a backup restore or explicit
@@ -535,7 +535,7 @@ nodes:
 
       ## 8. SAVE
       Set `state.lastRunAt = <now-iso>`. Write
-      `.archon/state/closed-dedup-state.json` with the Write tool
+      `.meridian/state/closed-dedup-state.json` with the Write tool
       (2-space JSON).
 
       ## 9. Summary output
@@ -634,7 +634,7 @@ nodes:
 
       # State file
 
-      Location: `.archon/state/closed-pr-dedup-state.json`.
+      Location: `.meridian/state/closed-pr-dedup-state.json`.
       `mkdir -p .archon/state` before any write.
 
       Default shape when missing:
@@ -655,7 +655,7 @@ nodes:
 
       ## 1. Read state
       ```
-      cat .archon/state/closed-pr-dedup-state.json 2>/dev/null
+      cat .meridian/state/closed-pr-dedup-state.json 2>/dev/null
       ```
       Parse JSON:
         ENOENT / empty → default shape. JSON.parse throw → ABORT loudly
@@ -754,7 +754,7 @@ nodes:
 
       ## 7. SAVE
       Set `state.lastRunAt = <now-iso>`. Write
-      `.archon/state/closed-pr-dedup-state.json` with the Write tool.
+      `.meridian/state/closed-pr-dedup-state.json` with the Write tool.
 
       ## 8. Summary output
           ## Closed-PR dedup — <now>
@@ -871,7 +871,7 @@ nodes:
           write), print a line prefixed `[DRY] would ...` with the full
           body you would have posted on which target.
         - Do NOT run `gh issue comment` or `gh pr comment`. Do NOT use
-          the Write tool on `.archon/state/*.json`.
+          the Write tool on `.meridian/state/*.json`.
         - When delegating via Task to pr-issue-matcher, PREPEND this exact
           sentence to every Task prompt:
               "DRY_RUN=1 is active. Run only read-only gh commands."
@@ -891,7 +891,7 @@ nodes:
 
       # State file
 
-      Location: `.archon/state/pr-state.json`. `mkdir -p .archon/state`
+      Location: `.meridian/state/pr-state.json`. `mkdir -p .archon/state`
       before any write.
 
       Default shape when missing:
@@ -923,7 +923,7 @@ nodes:
 
       ## 1. Read state
       ```
-      cat .archon/state/pr-state.json 2>/dev/null
+      cat .meridian/state/pr-state.json 2>/dev/null
       ```
       Parse JSON:
         ENOENT / empty → default shape. JSON.parse throw → ABORT loudly
@@ -1117,7 +1117,7 @@ nodes:
             // are already in `existing` and survive the spread
           };
 
-      Update `state.lastRunAt`. Write `.archon/state/pr-state.json` in
+      Update `state.lastRunAt`. Write `.meridian/state/pr-state.json` in
       ONE Write call at the end of the node.
 
       ## 8. Summary
@@ -1174,7 +1174,7 @@ nodes:
 
       # State file
 
-      Location: `.archon/state/stale-nudge-state.json`.
+      Location: `.meridian/state/stale-nudge-state.json`.
       `mkdir -p .archon/state` before any write.
 
       Default shape:
@@ -1194,7 +1194,7 @@ nodes:
 
       ## 1. Read state
       ```
-      cat .archon/state/stale-nudge-state.json 2>/dev/null
+      cat .meridian/state/stale-nudge-state.json 2>/dev/null
       ```
       Parse JSON:
         ENOENT / empty → default shape. JSON.parse throw → ABORT loudly
@@ -1258,7 +1258,7 @@ nodes:
 
       ## 5. SAVE
       Set `state.lastRunAt = <now-iso>`. Write
-      `.archon/state/stale-nudge-state.json`.
+      `.meridian/state/stale-nudge-state.json`.
 
       ## 6. Summary
           ## Stale nudge — <now>
@@ -1311,7 +1311,7 @@ nodes:
       Some may include `(DRY RUN)` prefix or a "Skipping … per SKIP_X=1"
       line — pass those through honestly.
 
-      You may also read the state files under `.archon/state/` for any
+      You may also read the state files under `.meridian/state/` for any
       counts the summaries omitted, but keep it light — this is a digest,
       not a re-analysis.
 
@@ -1333,16 +1333,16 @@ nodes:
       3. Sources to read (all optional — missing files mean that node
          didn't run OR posted nothing):
 
-         a. `.archon/state/triage-state.json` → `pendingDedupComments`
+         a. `.meridian/state/triage-state.json` → `pendingDedupComments`
             Keyed by OPEN ISSUE number → `issues/<N>#issuecomment-<botCommentId>`.
 
-         b. `.archon/state/closed-dedup-state.json` → `closedMatchComments`
+         b. `.meridian/state/closed-dedup-state.json` → `closedMatchComments`
             Keyed by OPEN ISSUE number → `issues/<N>#issuecomment-<botCommentId>`.
 
-         c. `.archon/state/closed-pr-dedup-state.json` → `closedMatchComments`
+         c. `.meridian/state/closed-pr-dedup-state.json` → `closedMatchComments`
             Keyed by OPEN PR number → `pull/<N>#issuecomment-<botCommentId>`.
 
-         d. `.archon/state/pr-state.json` → `linkedPrs[<pr>].commentIds`:
+         d. `.meridian/state/pr-state.json` → `linkedPrs[<pr>].commentIds`:
               - `fullyAddresses[<issue>]` → comment lives ON THE PR:
                     `pull/<pr>#issuecomment-<id>`
               - `related.pr[<issue>]`     → `pull/<pr>#issuecomment-<id>`
@@ -1352,7 +1352,7 @@ nodes:
             in that case list the action without a URL and suffix
             `(no ID captured)`.
 
-         e. `.archon/state/stale-nudge-state.json` → `nudged`
+         e. `.meridian/state/stale-nudge-state.json` → `nudged`
             Keys: `"issue/<N>"` → `issues/<N>#issuecomment-<botCommentId>`
                   `"pr/<N>"`    → `pull/<N>#issuecomment-<botCommentId>`
 

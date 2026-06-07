@@ -5,7 +5,8 @@
  * return value so a doctor failure does not abort setup (the env file was
  * already written successfully).
  */
-import { mkdirSync, writeFileSync, rmSync } from 'fs';
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs';
+import { homedir } from 'os';
 import { join } from 'path';
 import { execFileAsync } from '@archon/git';
 import { BUNDLED_IS_BINARY, getArchonHome, createLogger, getTelemetryStatus } from '@archon/paths';
@@ -191,6 +192,41 @@ export async function checkTelemetry(): Promise<CheckResult> {
     POSTHOG_API_KEY: 'POSTHOG_API_KEY set to an opt-out value',
   };
   return { label, status: 'skip', message: `disabled (${reasonText[status.disabledReason]})` };
+}
+
+/**
+ * Testable wrapper so tests can spy on the fs probe without mocking the 'fs' module.
+ */
+export function probeAuthJsonExists(): boolean {
+  try {
+    return existsSync(`${homedir()}/.pi/agent/auth.json`);
+  } catch {
+    return false;
+  }
+}
+
+export async function checkPi(env: NodeJS.ProcessEnv): Promise<CheckResult> {
+  const label = 'Pi provider';
+  const isPiDefault = env.DEFAULT_AI_ASSISTANT === 'pi';
+  if (!isPiDefault) {
+    return { label, status: 'skip', message: 'Pi provider not configured as default assistant' };
+  }
+  // auth.json present → authenticated
+  if (probeAuthJsonExists()) {
+    return { label, status: 'pass', message: '~/.pi/agent/auth.json found' };
+  }
+  // A recognised API key env var can also authenticate Pi backends
+  const piKeyVars = ['ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'PI_API_KEY'];
+  for (const v of piKeyVars) {
+    if (env[v]) {
+      return { label, status: 'pass', message: `${v} is set` };
+    }
+  }
+  return {
+    label,
+    status: 'fail',
+    message: 'No Pi auth found. Run `pi /login` or set an API key env var.',
+  };
 }
 
 export async function checkSlack(env: NodeJS.ProcessEnv): Promise<CheckResult> {

@@ -73,14 +73,14 @@ describe('bundled-defaults', () => {
       }
     });
 
-    it('archon-pr-review-scope should read .pr-number before other discovery', () => {
-      const content = BUNDLED_COMMANDS['archon-pr-review-scope'];
+    it('meridian-pr-review-scope should read .pr-number before other discovery', () => {
+      const content = BUNDLED_COMMANDS['meridian-pr-review-scope'];
       expect(content).toContain('$ARTIFACTS_DIR/.pr-number');
       expect(content).toContain('PR_NUMBER=$(cat $ARTIFACTS_DIR/.pr-number');
     });
 
-    it('archon-create-pr should write .pr-number to artifacts', () => {
-      const content = BUNDLED_COMMANDS['archon-create-pr'];
+    it('meridian-create-pr should write .pr-number to artifacts', () => {
+      const content = BUNDLED_COMMANDS['meridian-create-pr'];
       expect(content).toContain('echo "$PR_NUMBER" > "$ARTIFACTS_DIR/.pr-number"');
     });
   });
@@ -92,8 +92,8 @@ describe('bundled-defaults', () => {
       }
     });
 
-    it('archon-workflow-builder should have validate-before-save node ordering and key constraints', () => {
-      const content = BUNDLED_WORKFLOWS['archon-workflow-builder'];
+    it('meridian-workflow-builder should have validate-before-save node ordering and key constraints', () => {
+      const content = BUNDLED_WORKFLOWS['meridian-workflow-builder'];
       expect(content).toContain('id: validate-yaml');
       expect(content).toContain('depends_on: [validate-yaml]');
       expect(content).toContain('denied_tools: [Edit, Bash]');
@@ -101,8 +101,8 @@ describe('bundled-defaults', () => {
       expect(content).toContain('workflow_name');
     });
 
-    it('archon-adversarial-dev init-workspace should avoid non-portable sed -i', () => {
-      const content = BUNDLED_WORKFLOWS['archon-adversarial-dev'];
+    it('meridian-adversarial-dev init-workspace should avoid non-portable sed -i', () => {
+      const content = BUNDLED_WORKFLOWS['meridian-adversarial-dev'];
       expect(content).toContain('STATE_TMP="$ARTIFACTS/state.json.tmp"');
       expect(content).toContain(
         'sed "s/SPRINT_COUNT_PLACEHOLDER/$SPRINT_COUNT/" "$ARTIFACTS/state.json" > "$STATE_TMP"'

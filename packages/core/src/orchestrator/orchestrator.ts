@@ -48,7 +48,7 @@ import * as db from '../db/conversations';
 import { createIsolationStore } from '../db/isolation-environments';
 import { toError } from '../utils/error';
 import { getCodebase } from '../db/codebases';
-import { executeWorkflow } from '@archon/workflows/executor';
+import { executeWorkflow, hydrateResumableRun } from '@archon/workflows/executor';
 import type { WorkflowDefinition } from '@archon/workflows/schemas/workflow';
 import { createWorkflowDeps } from '../workflows/store-adapter';
 import {
@@ -358,23 +358,45 @@ export async function dispatchBackgroundWorkflow(
   // 7. Pre-create workflow run row so the UI can fetch it immediately.
   // Without this, navigating to the execution page before executeWorkflow's
   // async setup completes would 404 (row doesn't exist yet for 1-5 seconds).
+  // Also check for a resumable prior run — resume detection is the caller's responsibility.
   const workflowDeps = createWorkflowDeps();
   let preCreatedRun: Awaited<ReturnType<typeof workflowDeps.store.createWorkflowRun>> | undefined;
+  let priorCompletedNodes: Map<string, string> | undefined;
+  // Auto-resume detection: check for a prior failed/paused run on same workflow + worktree
   try {
-    preCreatedRun = await workflowDeps.store.createWorkflowRun({
-      workflow_name: workflow.name,
-      conversation_id: workerConv.id,
-      codebase_id: ctx.codebaseId,
-      user_message: ctx.originalMessage,
-      working_path: workerCwd,
-      metadata: ctx.issueContext ? { github_context: ctx.issueContext } : {},
-      parent_conversation_id: ctx.conversationDbId,
-      user_id: ctx.userId,
-    });
+    const resumableRun = await workflowDeps.store.findResumableRun(workflow.name, workerCwd);
+    if (resumableRun) {
+      const hydrated = await hydrateResumableRun(workflowDeps, resumableRun);
+      if (hydrated) {
+        preCreatedRun = hydrated.preCreatedRun;
+        priorCompletedNodes = hydrated.priorCompletedNodes;
+      }
+    }
   } catch (error) {
     const err = error as Error;
-    getLog().error({ err, workflowName: workflow.name }, 'pre_create_workflow_run_failed');
-    // Non-fatal: executeWorkflow will create its own row as fallback
+    getLog().warn(
+      { err, workflowName: workflow.name, workerCwd },
+      'workflow.background_resume_check_failed'
+    );
+    // Non-fatal: fall through to create a fresh run
+  }
+  if (!preCreatedRun) {
+    try {
+      preCreatedRun = await workflowDeps.store.createWorkflowRun({
+        workflow_name: workflow.name,
+        conversation_id: workerConv.id,
+        codebase_id: ctx.codebaseId,
+        user_message: ctx.originalMessage,
+        working_path: workerCwd,
+        metadata: ctx.issueContext ? { github_context: ctx.issueContext } : {},
+        parent_conversation_id: ctx.conversationDbId,
+        user_id: ctx.userId,
+      });
+    } catch (error) {
+      const err = error as Error;
+      getLog().error({ err, workflowName: workflow.name }, 'pre_create_workflow_run_failed');
+      // Non-fatal: executeWorkflow will create its own row as fallback
+    }
   }
 
   // 8. Fire-and-forget: run workflow in background
@@ -389,11 +411,14 @@ export async function dispatchBackgroundWorkflow(
           workflow,
           ctx.originalMessage,
           workerConv.id,
-          ctx.codebaseId,
-          ctx.issueContext,
-          isolationContext,
-          ctx.conversationDbId, // parentConversationId
-          preCreatedRun
+          {
+            codebaseId: ctx.codebaseId,
+            issueContext: ctx.issueContext,
+            isolationContext,
+            parentConversationId: ctx.conversationDbId,
+            preCreatedRun,
+            priorCompletedNodes,
+          }
         );
         // Surface workflow output to parent conversation as a result card
         if ('paused' in result) {

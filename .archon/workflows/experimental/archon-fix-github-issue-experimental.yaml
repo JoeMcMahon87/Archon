@@ -1,6 +1,6 @@
-name: archon-fix-github-issue-experimental
+name: meridian-fix-github-issue-experimental
 description: |
-  EXPERIMENTAL: Path A variant of archon-fix-github-issue. Same DAG shape — same nodes,
+  EXPERIMENTAL: Path A variant of meridian-fix-github-issue. Same DAG shape — same nodes,
   same dependencies, same command files. Additions:
     - Two extra classifier fields: `scope` (small/medium/large) and `needs_external_research`.
     - A new `smoke-validate` node that checks the issue's concrete claims (file paths,
@@ -25,7 +25,7 @@ description: |
   Use when: User wants to FIX, RESOLVE, or IMPLEMENT a solution for a GitHub issue.
   Triggers: "fix this issue", "implement issue #123", "resolve this bug", "fix it",
             "fix issue", "resolve issue", "fix #123".
-  NOT for: Comprehensive multi-agent reviews (use archon-issue-review-full),
+  NOT for: Comprehensive multi-agent reviews (use meridian-issue-review-full),
            questions about issues, CI failures, PR reviews, general exploration.
 
   DAG workflow that:
@@ -209,7 +209,7 @@ nodes:
   # ═══════════════════════════════════════════════════════════════
 
   - id: web-research
-    command: archon-web-research
+    command: meridian-web-research
     depends_on: [classify, smoke-validate]
     # Runs when research is flagged OR smoke-validate finds the issue unreliable (fallback)
     when: "$classify.output.needs_external_research == 'true' || $smoke-validate.output.claims_accurate == 'false'"
@@ -220,7 +220,7 @@ nodes:
   # ═══════════════════════════════════════════════════════════════
 
   - id: investigate
-    command: archon-investigate-issue
+    command: meridian-investigate-issue
     depends_on: [classify, web-research]
     when: "$classify.output.issue_type == 'bug'"
     # Allow web-research to be skipped (needs_external_research == 'false') without blocking
@@ -228,7 +228,7 @@ nodes:
     context: fresh
 
   - id: plan
-    command: archon-create-plan
+    command: meridian-create-plan
     depends_on: [classify, web-research]
     when: "$classify.output.issue_type != 'bug'"
     # Allow web-research to be skipped (needs_external_research == 'false') without blocking
@@ -236,8 +236,8 @@ nodes:
     context: fresh
 
   # Bridge: ensure investigation.md exists for the implement step
-  # archon-fix-issue reads from $ARTIFACTS_DIR/investigation.md
-  # archon-create-plan writes to $ARTIFACTS_DIR/plan.md
+  # meridian-fix-issue reads from $ARTIFACTS_DIR/investigation.md
+  # meridian-create-plan writes to $ARTIFACTS_DIR/plan.md
   # This node copies plan.md → investigation.md when the plan path was taken
   - id: bridge-artifacts
     bash: |
@@ -257,7 +257,7 @@ nodes:
   # ═══════════════════════════════════════════════════════════════
 
   - id: implement
-    command: archon-fix-issue
+    command: meridian-fix-issue
     depends_on: [bridge-artifacts]
     context: fresh
     model: opus[1m]
@@ -267,7 +267,7 @@ nodes:
   # ═══════════════════════════════════════════════════════════════
 
   - id: validate
-    command: archon-validate
+    command: meridian-validate
     depends_on: [implement]
     context: fresh
 
@@ -323,7 +323,7 @@ nodes:
   # ═══════════════════════════════════════════════════════════════
 
   - id: review-scope
-    command: archon-pr-review-scope
+    command: meridian-pr-review-scope
     depends_on: [create-pr]
     context: fresh
 
@@ -383,7 +383,7 @@ nodes:
 
   # Code review always runs — mandatory
   - id: code-review
-    command: archon-code-review-agent
+    command: meridian-code-review-agent
     depends_on: [review-classify]
     context: fresh
 
@@ -391,25 +391,25 @@ nodes:
   # OR when smoke-validate found the issue claims unreliable (fallback to full review).
   # Expression form: A && B || A && C  (the condition evaluator has no parens; && binds tighter than ||)
   - id: error-handling
-    command: archon-error-handling-agent
+    command: meridian-error-handling-agent
     depends_on: [review-classify]
     when: "$review-classify.output.run_error_handling == 'true' && $classify.output.scope != 'small' || $review-classify.output.run_error_handling == 'true' && $smoke-validate.output.claims_accurate == 'false'"
     context: fresh
 
   - id: test-coverage
-    command: archon-test-coverage-agent
+    command: meridian-test-coverage-agent
     depends_on: [review-classify]
     when: "$review-classify.output.run_test_coverage == 'true' && $classify.output.scope != 'small' || $review-classify.output.run_test_coverage == 'true' && $smoke-validate.output.claims_accurate == 'false'"
     context: fresh
 
   - id: comment-quality
-    command: archon-comment-quality-agent
+    command: meridian-comment-quality-agent
     depends_on: [review-classify]
     when: "$review-classify.output.run_comment_quality == 'true' && $classify.output.scope != 'small' || $review-classify.output.run_comment_quality == 'true' && $smoke-validate.output.claims_accurate == 'false'"
     context: fresh
 
   - id: docs-impact
-    command: archon-docs-impact-agent
+    command: meridian-docs-impact-agent
     depends_on: [review-classify]
     when: "$review-classify.output.run_docs_impact == 'true' && $classify.output.scope != 'small' || $review-classify.output.run_docs_impact == 'true' && $smoke-validate.output.claims_accurate == 'false'"
     context: fresh
@@ -419,13 +419,13 @@ nodes:
   # ═══════════════════════════════════════════════════════════════
 
   - id: synthesize
-    command: archon-synthesize-review
+    command: meridian-synthesize-review
     depends_on: [code-review, error-handling, test-coverage, comment-quality, docs-impact]
     trigger_rule: one_success
     context: fresh
 
   - id: self-fix
-    command: archon-self-fix-all
+    command: meridian-self-fix-all
     depends_on: [synthesize]
     context: fresh
 
@@ -434,7 +434,7 @@ nodes:
   # ═══════════════════════════════════════════════════════════════
 
   - id: simplify
-    command: archon-simplify-changes
+    command: meridian-simplify-changes
     depends_on: [self-fix]
     context: fresh
 
@@ -443,6 +443,6 @@ nodes:
   # ═══════════════════════════════════════════════════════════════
 
   - id: report
-    command: archon-issue-completion-report
+    command: meridian-issue-completion-report
     depends_on: [simplify]
     context: fresh

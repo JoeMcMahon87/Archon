@@ -6,7 +6,8 @@
  * Captures all assistant output regardless of streaming mode for $node_id.output substitution.
  */
 import { readFile } from 'fs/promises';
-import { isAbsolute, resolve as resolvePath } from 'path';
+import { writeFileSync } from 'fs';
+import { isAbsolute, join as joinPath, resolve as resolvePath } from 'path';
 import { execFileAsync } from '@archon/git';
 import { discoverScriptsForCwd } from './script-discovery';
 import type {
@@ -284,10 +285,14 @@ function shellQuote(value: string): string {
  *   they are safe to embed in bash scripts passed to `bash -c`. Set true only for
  *   bash node script substitution; AI/command prompt substitution should use false.
  */
+/** Threshold above which a shell-escaped value is spilled to a temp file. */
+const LARGE_OUTPUT_THRESHOLD = 32_768;
+
 export function substituteNodeOutputRefs(
   prompt: string,
   nodeOutputs: Map<string, NodeOutput>,
-  escapedForBash = false
+  escapedForBash = false,
+  outputFileDir?: string
 ): string {
   return prompt.replace(
     /\$([a-zA-Z_][a-zA-Z0-9_-]*)\.output(?:\.([a-zA-Z_][a-zA-Z0-9_]*))?/g,
@@ -298,22 +303,73 @@ export function substituteNodeOutputRefs(
         return escapedForBash ? "''" : '';
       }
       if (!field) {
+        // Bare $node.output — use output text; spill large values to a file.
+        if (escapedForBash && outputFileDir && nodeOutput.output.length >= LARGE_OUTPUT_THRESHOLD) {
+          const filename = `${nodeId}.nodeoutput`;
+          const filepath = joinPath(outputFileDir, filename);
+          try {
+            writeFileSync(filepath, nodeOutput.output);
+            return `$(cat ${filepath})`;
+          } catch {
+            // fall through to inline shell-quoting
+          }
+        }
         return escapedForBash ? shellQuote(nodeOutput.output) : nodeOutput.output;
       }
+
+      // Field access: prefer structuredOutput when it's a plain (non-null, non-array) object.
+      const so = (nodeOutput as { structuredOutput?: unknown }).structuredOutput;
+      const useStructured =
+        so !== null && so !== undefined && typeof so === 'object' && !Array.isArray(so);
+      if (useStructured) {
+        const value = (so as Record<string, unknown>)[field];
+        if (value === undefined || value === null) {
+          return escapedForBash ? "''" : '';
+        }
+        if (typeof value === 'string') {
+          if (escapedForBash && outputFileDir && value.length >= LARGE_OUTPUT_THRESHOLD) {
+            const filename = `${nodeId}.${field}.nodeoutput`;
+            const filepath = joinPath(outputFileDir, filename);
+            try {
+              writeFileSync(filepath, value);
+              return `$(cat ${filepath})`;
+            } catch {
+              // fall through to inline quoting
+            }
+          }
+          return escapedForBash ? shellQuote(value) : value;
+        }
+        if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+        if (Array.isArray(value) || typeof value === 'object') {
+          const json = JSON.stringify(value);
+          return escapedForBash ? shellQuote(json) : json;
+        }
+        return escapedForBash ? "''" : '';
+      }
+
+      // Fallback: JSON.parse the output text (backward-compat for Claude/Codex).
       try {
         const parsed = JSON.parse(nodeOutput.output) as Record<string, unknown>;
         const value = parsed[field];
-        if (typeof value === 'string') return escapedForBash ? shellQuote(value) : value;
-        // numbers and booleans from JSON.parse are shell-safe without quoting:
-        // JSON disallows NaN/Infinity, so String(number) contains only digits, sign, and '.'.
-        // String(boolean) is 'true' or 'false' — no shell metacharacters.
+        if (typeof value === 'string') {
+          if (escapedForBash && outputFileDir && value.length >= LARGE_OUTPUT_THRESHOLD) {
+            const filename = `${nodeId}.${field}.nodeoutput`;
+            const filepath = joinPath(outputFileDir, filename);
+            try {
+              writeFileSync(filepath, value);
+              return `$(cat ${filepath})`;
+            } catch {
+              // fall through to inline quoting
+            }
+          }
+          return escapedForBash ? shellQuote(value) : value;
+        }
+        // numbers and booleans from JSON.parse are shell-safe without quoting.
         if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-        // arrays and objects: JSON-stringify. Bash passes substitution as a single
-        // argument, so downstream tools (jq, etc.) receive a JSON literal they can parse.
         if (Array.isArray(value) || typeof value === 'object') {
           return escapedForBash ? shellQuote(JSON.stringify(value)) : JSON.stringify(value);
         }
-        return escapedForBash ? "''" : ''; // null, undefined, symbol, bigint → empty
+        return escapedForBash ? "''" : ''; // null, undefined → empty
       } catch (jsonErr) {
         getLog().warn(
           { nodeId, field, outputPreview: nodeOutput.output.slice(0, 100), err: jsonErr as Error },
@@ -964,7 +1020,9 @@ async function executeNodeInternal(
         // Fail loudly on any other SDK error result. Previously we broke out of
         // the stream silently, producing empty/partial output without signaling
         // failure — which let failed iterations masquerade as successes (#1208).
-        if (msg.isError) {
+        // Exception: isError + errorSubtype === 'success' is a stop_sequence
+        // termination — the AI finished its work correctly (#1425).
+        if (msg.isError && msg.errorSubtype !== 'success') {
           const subtype = msg.errorSubtype ?? 'unknown';
           const errorsDetail = msg.errors?.length ? ` — ${msg.errors.join('; ')}` : '';
           getLog().error(
@@ -1079,8 +1137,41 @@ async function executeNodeInternal(
       }
     }
 
-    // If the node completed via idle timeout, log it
+    // If the node completed via idle timeout, log it. When there is no output at all,
+    // treat it as a failure — the AI likely never started or was silently rejected.
     if (nodeIdleTimedOut) {
+      if (nodeOutputText.trim() === '' && structuredOutput === undefined) {
+        const duration = Date.now() - nodeStartTime;
+        const idleError = `Node '${node.id}' timed out with no output after ${String(effectiveIdleTimeout)}ms idle.`;
+        getLog().error(
+          { nodeId: node.id, timeoutMs: effectiveIdleTimeout },
+          'dag_node_idle_timeout_no_output'
+        );
+        await logNodeError(logDir, workflowRun.id, node.id, idleError);
+        deps.store
+          .createWorkflowEvent({
+            workflow_run_id: workflowRun.id,
+            event_type: 'node_failed',
+            step_name: node.id,
+            data: { error: idleError, duration_ms: duration },
+          })
+          .catch((err: Error) => {
+            getLog().error(
+              { err, workflowRunId: workflowRun.id, eventType: 'node_failed' },
+              'workflow_event_persist_failed'
+            );
+          });
+        emitter.emit({
+          type: 'node_failed',
+          runId: workflowRun.id,
+          nodeId: node.id,
+          nodeName: node.command ?? node.id,
+          error: idleError,
+        });
+        lastNodeCancelCheck.delete(`${workflowRun.id}:${node.id}`);
+        lastNodeActivityUpdate.delete(`${workflowRun.id}:${node.id}`);
+        return { state: 'failed', output: '', error: idleError };
+      }
       getLog().warn(
         { nodeId: node.id, timeoutMs: effectiveIdleTimeout },
         'dag_node_completed_via_idle_timeout'
@@ -1380,7 +1471,8 @@ async function executeBashNode(
     nodeName: node.id,
   });
 
-  // Variable substitution on script
+  // Variable substitution on script — skip user message to prevent shell injection;
+  // USER_MESSAGE and ARGUMENTS are passed as env vars instead.
   const { prompt: substitutedScript } = substituteWorkflowVariables(
     node.bash,
     workflowRun.id,
@@ -1393,7 +1485,8 @@ async function executeBashNode(
     undefined,
     undefined,
     undefined,
-    workflowRun.workflow_name
+    workflowRun.workflow_name,
+    true // skipUserMessageSubstitution
   );
   const finalScript = substituteNodeOutputRefs(substitutedScript, nodeOutputs, true);
 
@@ -1404,6 +1497,8 @@ async function executeBashNode(
     LOG_DIR: logDir,
     BASE_BRANCH: baseBranch,
     WORKFLOW_NAME: workflowRun.workflow_name,
+    USER_MESSAGE: workflowRun.user_message,
+    ARGUMENTS: workflowRun.user_message,
     ...(envVars ?? {}),
   };
 
@@ -2019,7 +2114,9 @@ async function executeLoopNode(
           // silently, producing empty output and continuing to the next iteration —
           // which made `error_during_execution` on resumed interactive loops look
           // like a "5-second crash" that kept burning iterations (#1208).
-          if (msg.isError) {
+          // Exception: isError + errorSubtype === 'success' is a stop_sequence
+          // termination — the AI finished its work correctly (#1425).
+          if (msg.isError && msg.errorSubtype !== 'success') {
             const subtype = msg.errorSubtype ?? 'unknown';
             const errorsDetail = msg.errors?.length ? ` — ${msg.errors.join('; ')}` : '';
             getLog().error(
@@ -2665,40 +2762,62 @@ export async function executeDagWorkflow(
     const layerResults = await Promise.allSettled(
       layer.map(async (node): Promise<{ nodeId: string; output: NodeExecutionResult }> => {
         try {
-          // 0. Skip if this node completed successfully in a prior run (resume path)
+          // 0. Skip if this node completed successfully in a prior run (resume path).
+          //    Exception: nodes flagged always_run: true are re-executed even when cached.
           if (priorCompletedNodes?.has(node.id)) {
-            getLog().info({ nodeId: node.id }, 'dag.node_skipped_prior_success');
-            await logNodeSkip(logDir, workflowRun.id, node.id, 'prior_success').catch(
-              (err: Error) => {
-                getLog().warn({ err, nodeId: node.id }, 'dag.node_skip_log_write_failed');
-              }
-            );
-            deps.store
-              .createWorkflowEvent({
-                workflow_run_id: workflowRun.id,
-                event_type: 'node_skipped_prior_success',
-                step_name: node.id,
-                data: { reason: 'prior_success' },
-              })
-              .catch((err: Error) => {
-                getLog().error(
-                  { err, workflowRunId: workflowRun.id, eventType: 'node_skipped_prior_success' },
-                  'workflow_event_persist_failed'
-                );
+            const priorOutput = priorCompletedNodes.get(node.id) ?? '';
+            if (node.always_run) {
+              // Emit an audit event noting the prior output is being discarded, then fall
+              // through to normal execution below.
+              getLog().info({ nodeId: node.id }, 'dag.node_always_run_reset');
+              deps.store
+                .createWorkflowEvent({
+                  workflow_run_id: workflowRun.id,
+                  event_type: 'node_always_run_reset',
+                  step_name: node.id,
+                  data: { prior_output: priorOutput },
+                })
+                .catch((err: Error) => {
+                  getLog().error(
+                    { err, workflowRunId: workflowRun.id, eventType: 'node_always_run_reset' },
+                    'workflow_event_persist_failed'
+                  );
+                });
+              // do NOT return early — fall through to execute the node
+            } else {
+              getLog().info({ nodeId: node.id }, 'dag.node_skipped_prior_success');
+              await logNodeSkip(logDir, workflowRun.id, node.id, 'prior_success').catch(
+                (err: Error) => {
+                  getLog().warn({ err, nodeId: node.id }, 'dag.node_skip_log_write_failed');
+                }
+              );
+              deps.store
+                .createWorkflowEvent({
+                  workflow_run_id: workflowRun.id,
+                  event_type: 'node_skipped_prior_success',
+                  step_name: node.id,
+                  data: { reason: 'prior_success', node_output: priorOutput },
+                })
+                .catch((err: Error) => {
+                  getLog().error(
+                    { err, workflowRunId: workflowRun.id, eventType: 'node_skipped_prior_success' },
+                    'workflow_event_persist_failed'
+                  );
+                });
+              const emitterPrior = getWorkflowEventEmitter();
+              emitterPrior.emit({
+                type: 'node_skipped',
+                runId: workflowRun.id,
+                nodeId: node.id,
+                nodeName: node.command ?? node.id,
+                reason: 'prior_success',
               });
-            const emitterPrior = getWorkflowEventEmitter();
-            emitterPrior.emit({
-              type: 'node_skipped',
-              runId: workflowRun.id,
-              nodeId: node.id,
-              nodeName: node.command ?? node.id,
-              reason: 'prior_success',
-            });
-            // Return the pre-populated output (already in nodeOutputs)
-            return {
-              nodeId: node.id,
-              output: nodeOutputs.get(node.id) ?? { state: 'skipped' as const, output: '' },
-            };
+              // Return the pre-populated output (already in nodeOutputs)
+              return {
+                nodeId: node.id,
+                output: nodeOutputs.get(node.id) ?? { state: 'skipped' as const, output: '' },
+              };
+            }
           }
 
           // 1. Evaluate trigger rule
@@ -2980,7 +3099,52 @@ export async function executeDagWorkflow(
           // Parallel layers always get fresh sessions; explicit 'fresh' context also forces it.
           // 'shared' forces continuation. Default: fresh for parallel, inherited for sequential.
           const isFresh = isParallelLayer || node.context === 'fresh';
-          const resumeSessionId = isFresh ? undefined : lastSequentialSessionId;
+          let resumeSessionId = isFresh ? undefined : lastSequentialSessionId;
+
+          // 5.5. persist_session: load stored session from DB and use as resumeSessionId.
+          // Effective when node.persist_session === true, OR workflow.persist_sessions === true
+          // and the node doesn't explicitly opt out. Skipped when isFresh (context:fresh / parallel).
+          const workflowPersistSessions = !!(workflow as { persist_sessions?: boolean })
+            .persist_sessions;
+          const nodePersistFlag = (node as { persist_session?: boolean }).persist_session;
+          const effectivePersistSession =
+            nodePersistFlag === false
+              ? false
+              : nodePersistFlag === true
+                ? true
+                : workflowPersistSessions;
+
+          if (effectivePersistSession && !isFresh) {
+            const aiClientForCaps = deps.getAgentProvider(provider);
+            if (!aiClientForCaps.getCapabilities().sessionResume) {
+              throw new Error(
+                `Node '${node.id}' has persist_session: true but provider '${provider}' does not support sessionResume. ` +
+                  'Remove persist_session, or use a provider with sessionResume capability.'
+              );
+            }
+            try {
+              const storedSession = await deps.store.getWorkflowNodeSession({
+                workflow_name: workflow.name,
+                node_id: node.id,
+                scope_key: conversationId,
+                provider,
+              });
+              if (storedSession?.provider_session_id) {
+                resumeSessionId = storedSession.provider_session_id;
+              }
+            } catch (lookupErr) {
+              getLog().warn(
+                { err: lookupErr as Error, nodeId: node.id },
+                'persist_session_lookup_failed'
+              );
+              await safeSendMessage(
+                platform,
+                conversationId,
+                `⚠️ Could not load persisted session for node \`${node.id}\` — running with a fresh session.`,
+                { workflowId: workflowRun.id, nodeName: node.id }
+              );
+            }
+          }
 
           // 6. Execute with retry for transient failures
           const retryConfig = getEffectiveNodeRetryConfig(node);
@@ -3057,6 +3221,46 @@ export async function executeDagWorkflow(
             );
 
             await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+
+          // 6.5. persist_session post-execution: upsert new session ID or delete stale row.
+          if (effectivePersistSession && !isFresh && output.state === 'completed') {
+            const newSid = output.sessionId;
+            if (newSid) {
+              deps.store
+                .upsertWorkflowNodeSession({
+                  workflow_name: workflow.name,
+                  node_id: node.id,
+                  scope_key: conversationId,
+                  provider,
+                  provider_session_id: newSid,
+                  last_run_id: workflowRun.id,
+                })
+                .catch(async (upsertErr: Error) => {
+                  getLog().warn(
+                    { err: upsertErr, nodeId: node.id },
+                    'persist_session_upsert_failed'
+                  );
+                  await safeSendMessage(
+                    platform,
+                    conversationId,
+                    `⚠️ Could not persist session for node \`${node.id}\`: ${upsertErr.message}`,
+                    { workflowId: workflowRun.id, nodeName: node.id }
+                  );
+                });
+            } else {
+              // Provider returned no session ID → remove stale row if one exists.
+              deps.store
+                .deleteWorkflowNodeSessions({
+                  workflow_name: workflow.name,
+                  scope_key: conversationId,
+                  node_id: node.id,
+                  provider,
+                })
+                .catch((delErr: Error) => {
+                  getLog().warn({ err: delErr, nodeId: node.id }, 'persist_session_delete_failed');
+                });
+            }
           }
 
           return { nodeId: node.id, output };
@@ -3192,7 +3396,7 @@ export async function executeDagWorkflow(
     'dag_workflow_finished'
   );
 
-  if (!anyCompleted) {
+  if (!anyCompleted && !anyFailed) {
     if (await skipIfStatusChanged('dag.skip_fail_status_changed')) return;
     const failMsg =
       `DAG workflow '${workflow.name}' completed with no successful nodes. ` +
@@ -3228,7 +3432,7 @@ export async function executeDagWorkflow(
     if (await skipIfStatusChanged('dag.skip_fail_status_changed')) return;
     const failedNodes = [...nodeOutputs.entries()]
       .filter(([, o]) => o.state === 'failed')
-      .map(([id, o]) => `'${id}': ${o.state === 'failed' ? o.error : 'unknown'}`)
+      .map(([id, o]) => `${id} failed: ${o.state === 'failed' ? o.error : 'unknown'}`)
       .join('; ');
     const failMsg = `DAG workflow '${workflow.name}' completed with failures: ${failedNodes}`;
     // Classify failure mode from the first failed node's error for metrics
