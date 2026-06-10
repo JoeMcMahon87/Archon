@@ -143,7 +143,7 @@ Story: Implement login       →     ### Task 1: Implement login
 
 Add `**Addresses**: REQ-N` and `**Design**: design.md#anchor` to each task. Convert subtasks to `- [ ]` checkboxes. Add effort estimate tables.
 
-After conversion, run: `python3 ~/.kiro/scripts/validate-spec.py .kiro/specs/<feature>/`
+After conversion, run: `python3 ~/.specs/scripts/validate-spec.py .specs/<feature>/`
 
 ## BMAD Artifact Discovery
 

@@ -96,7 +96,7 @@ results_json.json
 
 ## Files Modified
 
-1. **~/.kiro/skills/git-dev-workflow/scripts/pre-commit-validate.py**
+1. **~/.specs/skills/git-dev-workflow/scripts/pre-commit-validate.py**
    - Added `SCAN_OUTPUT_DIR = Path(".security-scans")`
    - Added `setup_output_dir()` function
    - Updated all scanner commands to use output directory
@@ -107,7 +107,7 @@ results_json.json
    - Added scanner output file patterns
    - Added `results_json.json` (checkov default)
 
-3. **~/.kiro/skills/git-dev-workflow/SKILL.md**
+3. **~/.specs/skills/git-dev-workflow/SKILL.md**
    - Documented scanner output directory
    - Added note about gitignored outputs
 
@@ -127,7 +127,7 @@ results_json.json
 
 ```bash
 # Run validation
-python3.12 ~/.kiro/skills/git-dev-workflow/scripts/pre-commit-validate.py
+python3.12 ~/.specs/skills/git-dev-workflow/scripts/pre-commit-validate.py
 
 # Check outputs
 ls -la .security-scans/

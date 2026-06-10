@@ -51,8 +51,8 @@ All scripts accept `--profile PROFILE_NAME` to override the session profile. Wit
 All scripts also accept `--pipeline PIPELINE_NAME`. When both `--profile` and `--pipeline` are provided, the script builds a session on the fly without requiring `select-profile.py` first. This enables fully non-interactive one-liners:
 
 ```
-python3 ~/.kiro/skills/ssdf-manager/scripts/manage-overrides.py list --profile gov-admin --pipeline hcom-release-pipeline
-python3 ~/.kiro/skills/ssdf-manager/scripts/browse-scans.py --profile gov-admin --pipeline hcom-release-pipeline
+python3 ~/.specs/skills/ssdf-manager/scripts/manage-overrides.py list --profile gov-admin --pipeline hcom-release-pipeline
+python3 ~/.specs/skills/ssdf-manager/scripts/browse-scans.py --profile gov-admin --pipeline hcom-release-pipeline
 ```
 
 ## Override File Schema
@@ -105,4 +105,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/ssdf-manager/scripts/`.
+After setup, scripts are available at `~/.specs/skills/ssdf-manager/scripts/`.

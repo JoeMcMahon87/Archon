@@ -30,8 +30,8 @@ workflows:
 
       3. Scan the project ONLY for project-level context needed for mapping:
          a. Steering rules — check LOCAL then GLOBAL:
-            Local:  {project}/.kiro/steering/
-            Global: ~/.kiro/steering/
+            Local:  {project}/.specs/steering/
+            Global: ~/.specs/steering/
             Record which path resolved (local or global).
          b. Existing compliance docs — check for:
             - docs/compliance-by-family/ (standardized path)
@@ -73,7 +73,7 @@ workflows:
       Steps:
       1. Ask which family: PO, PS, PW, or RV
       2. Read .profile-id, load profile from assets/pipeline-profiles/
-      2.5. If sysml.enabled in project.yaml, scan .kiro/specs/*/model.sysml for
+      2.5. If sysml.enabled in project.yaml, scan .specs/*/model.sysml for
          ComplianceGraph blocks. Extract satisfy relationships targeting the
          requested family practices (e.g., PW_* for PW family). Build
          component-to-practice map. Corporate policy references come directly
@@ -120,8 +120,8 @@ workflows:
             (e.g., Lambda does NOT imply API Gateway).
          c. Cross-reference steering rules for additional context:
             - Steering rules: check LOCAL then GLOBAL:
-              Local: {project}/.kiro/steering/
-              Global: ~/.kiro/steering/
+              Local: {project}/.specs/steering/
+              Global: ~/.specs/steering/
             Record actual resolved paths in evidence.
             Do NOT cross-reference project feature specs (requirements.md,
             tasks.md, etc.) — SSDF mappings are about the pipeline, and
@@ -346,7 +346,7 @@ workflows:
     label: "Validate Compliance Documentation"
     description: "Check completeness and consistency of all compliance docs"
     instructions: |
-      Run: python3 ~/.kiro/skills/ssdf-compliance-mapping/scripts/validate_compliance.py {project_path}
+      Run: python3 ~/.specs/skills/ssdf-compliance-mapping/scripts/validate_compliance.py {project_path}
 
       Review output and for each finding, recommend the corrective workflow:
       - ".profile-id NOT FOUND" → run select-profile

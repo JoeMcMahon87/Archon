@@ -113,7 +113,7 @@ workflows:
       Run the converter script on the YAML content file:
 
       ```bash
-      python3 ~/.kiro/skills/pptx-creator/scripts/yaml_to_pptx.py <yaml-file> [--output <output.pptx>]
+      python3 ~/.specs/skills/pptx-creator/scripts/yaml_to_pptx.py <yaml-file> [--output <output.pptx>]
       ```
 
       If the user hasn't specified a YAML file, look for one created in the generate-content

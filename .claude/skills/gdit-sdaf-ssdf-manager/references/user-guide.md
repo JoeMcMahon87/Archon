@@ -45,7 +45,7 @@ The script:
 1. Lists available AWS profiles from `~/.aws/config` and `~/.aws/credentials`
 2. Validates the selected profile via `sts:GetCallerIdentity`
 3. Discovers pipeline instances by finding S3 buckets matching `*-artifacts-{account}-{region}`
-4. Saves session to `~/.kiro/skills/ssdf-manager/.session.json`
+4. Saves session to `~/.specs/skills/ssdf-manager/.session.json`
 
 Non-interactive alternative:
 ```
@@ -216,7 +216,7 @@ python3 scripts/view-changelog.py --days 30
 
 ## Project Context
 
-On first use, the AI generates a project context file at `~/.kiro/skills/ssdf-manager/.ssdf-context.json`. This captures:
+On first use, the AI generates a project context file at `~/.specs/skills/ssdf-manager/.ssdf-context.json`. This captures:
 
 - Architecture summary (resource types, templates, encryption posture)
 - Compensating controls (SCPs, NACLs, network isolation)
@@ -231,8 +231,8 @@ Force refresh: `python3 scripts/generate-context.py --source-dir temp/source/ --
 Source files downloaded to `temp/` are automatically deleted when the scan-report script exits (normal exit, Ctrl+C, or error). The `--no-cleanup` flag keeps files for debugging.
 
 Files that persist between sessions:
-- `~/.kiro/skills/ssdf-manager/.session.json` — profile and pipeline context
-- `~/.kiro/skills/ssdf-manager/.ssdf-context.json` — project architecture context
+- `~/.specs/skills/ssdf-manager/.session.json` — profile and pipeline context
+- `~/.specs/skills/ssdf-manager/.ssdf-context.json` — project architecture context
 
 ## Non-Interactive Usage
 

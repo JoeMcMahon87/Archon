@@ -111,7 +111,7 @@ workflows:
 # When user selects 'a N', the script outputs finding detail.
 # The AI then:
 # 1. Reads temp/source/{file} at the flagged line (use file-reading tools)
-# 2. Reads ~/.kiro/skills/ssdf-manager/.ssdf-context.json for architecture context
+# 2. Reads ~/.specs/skills/ssdf-manager/.ssdf-context.json for architecture context
 # 3. Analyzes whether the finding is false_positive, accepted_risk, or needs_remediation
 # 4. Presents recommendation with evidence and draft justification
 # 5. Manager accepts/edits/rejects before writing override

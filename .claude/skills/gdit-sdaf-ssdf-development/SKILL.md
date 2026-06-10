@@ -65,13 +65,13 @@ Before attestation:
 ### 1. collect-evidence
 Scrape git history for SSDF compliance tags. Produces per-practice evidence report.
 ```
-python3 ~/.kiro/skills/ssdf-development/scripts/collect_evidence.py [--days N] [--output PATH]
+python3 ~/.specs/skills/ssdf-development/scripts/collect_evidence.py [--days N] [--output PATH]
 ```
 
 ### 2. generate-sbom
 Generate CycloneDX SBOM from project dependencies. Detects tools (syft, cyclonedx-py/npm) with manual fallback.
 ```
-python3 ~/.kiro/skills/ssdf-development/scripts/generate_sbom.py [--project DIR] [--format cyclonedx|spdx] [--output PATH]
+python3 ~/.specs/skills/ssdf-development/scripts/generate_sbom.py [--project DIR] [--format cyclonedx|spdx] [--output PATH]
 ```
 
 ### 3. evidence-dashboard
@@ -80,12 +80,12 @@ Agent-driven workflow (no script). Synthesizes evidence report + steering covera
 ### 4. attestation-check
 Validate readiness against CISA attestation form statements.
 ```
-python3 ~/.kiro/skills/ssdf-development/scripts/validate_attestation.py [--project DIR] [--days N] [--output PATH]
+python3 ~/.specs/skills/ssdf-development/scripts/validate_attestation.py [--project DIR] [--days N] [--output PATH]
 ```
 
 ## ComplianceGraph Integration
 
-When the `--sysml` flag is passed to `collect-evidence` or `attestation-check`, scripts cross-reference commit evidence against `ComplianceGraph` blocks found in `.kiro/specs/*/model.sysml`. This enables four-dimensional coverage analysis:
+When the `--sysml` flag is passed to `collect-evidence` or `attestation-check`, scripts cross-reference commit evidence against `ComplianceGraph` blocks found in `.specs/*/model.sysml`. This enables four-dimensional coverage analysis:
 
 | Dimension | Source | What It Proves |
 |-----------|--------|----------------|
@@ -120,4 +120,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/ssdf-development/scripts/`.
+After setup, scripts are available at `~/.specs/skills/ssdf-development/scripts/`.

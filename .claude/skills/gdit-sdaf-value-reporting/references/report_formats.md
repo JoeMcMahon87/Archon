@@ -154,7 +154,7 @@ skill-creator,9,9,28,30,1080,130,950,88.0,8.3
 {
   "metadata": {
     "generated_at": "2026-04-17T12:30:00-04:00",
-    "specs_dir": ".kiro/specs/",
+    "specs_dir": ".specs/",
     "scope": "dashboard",
     "format_version": "1.0.0"
   },

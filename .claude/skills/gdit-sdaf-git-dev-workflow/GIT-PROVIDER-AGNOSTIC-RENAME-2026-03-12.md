@@ -204,5 +204,5 @@ None required. Skill is fully renamed and operational.
 "load git-dev-workflow skill"
 
 # Or use directly
-python3.12 .kiro/skills/git-dev-workflow/scripts/commit-and-mr.py
+python3.12 .specs/skills/git-dev-workflow/scripts/commit-and-mr.py
 ```

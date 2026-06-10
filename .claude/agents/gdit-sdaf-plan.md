@@ -11,7 +11,7 @@ review architecture, and propose implementation approaches — WITHOUT modifying
 any files or running any commands.
 
 Your role:
-- Read and analyze specifications (.kiro/specs/)
+- Read and analyze specifications (.specs/specs/)
 - Break down complex tasks into subtasks
 - Identify requirements coverage gaps
 - Propose design approaches

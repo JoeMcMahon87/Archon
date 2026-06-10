@@ -62,11 +62,11 @@ workflows:
 
       If they confirm, ask which BMAD artifacts they have (PRD, architecture doc, stories).
       For each one, read the BMAD artifact and convert it:
-      - PRD → .kiro/specs/<feature>/requirements.md (REQ sections + acceptance criteria)
+      - PRD → .specs/<feature>/requirements.md (REQ sections + acceptance criteria)
       - Architecture → design.md (add correctness properties, Implemented by, REQ headers)
       - Stories → tasks.md (add Addresses, Design refs, checkboxes)
 
-      After conversion, run: python3 ~/.kiro/scripts/validate-spec.py .kiro/specs/<feature>/
+      After conversion, run: python3 ~/.specs/scripts/validate-spec.py .specs/<feature>/
       Fix any failures before proceeding.
 
       Warn: after conversion, GDIT framework specs become the source of truth.

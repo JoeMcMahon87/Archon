@@ -5,7 +5,7 @@ enforcement: mandatory
 
 # Security and Compliance Standards
 
-Reference examples: `~/.kiro/steering/security-compliance-reference.md`
+Reference examples: `~/.specs/steering/security-compliance-reference.md`
 
 ## Context
 
@@ -36,7 +36,7 @@ This steering file satisfies the following SSDF practices:
 - Infrastructure security validation
 - Lambda IAM role uniqueness enforcement (KICS)
 
-The compliance pattern catalog (`~/.kiro/steering/compliance-pattern-catalog.md`) is the validation reference for implementation pattern to NIST control mappings. The authoritative compliance mapping lives in each spec's `model.sysml` `package ComplianceGraph` block.
+The compliance pattern catalog (`~/.specs/steering/compliance-pattern-catalog.md`) is the validation reference for implementation pattern to NIST control mappings. The authoritative compliance mapping lives in each spec's `model.sysml` `package ComplianceGraph` block.
 
 ## Enforcement
 

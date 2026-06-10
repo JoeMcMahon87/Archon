@@ -21,7 +21,7 @@ Fixed all immediate portability blockers across 5 GDIT-SDAF workflows to enable 
 
 **Issue**: Legacy `~/.kiro/` paths prevented workflows from running on fresh installations.
 
-**Fix**: Replaced all hardcoded paths with `${ARCHON_HOME:-$HOME/.archon}` pattern:
+**Fix**: Migrated to `~/.specs/` directory structure:
 
 ```bash
 # Before:
@@ -31,6 +31,8 @@ if [ ! -f "$HOME/.kiro/scripts/validate-spec.py" ]; then
 MERIDIAN_HOME="$(git rev-parse --show-toplevel)/.meridian"
 if [ ! -f "$MERIDIAN_HOME/scripts/validate-spec.py" ]; then
 ```
+
+**Note**: Path migration from `~/.kiro/` to `~/.specs/` completed 2026-06-10.
 
 **Files Changed**:
 - All guard-setup nodes
@@ -187,14 +189,14 @@ For users with existing `~/.kiro/` installations:
 # 1. Backup existing installation
 cp -r ~/.kiro ~/.kiro.backup
 
-# 2. Run the new setup (creates ~/.archon/)
-archon workflow run setup
+# 2. Migrate to new directory structure (as of 2026-06-10)
+mv ~/.kiro ~/.specs
 
-# 3. Optionally remove old installation
-rm -rf ~/.kiro
+# 3. Run verification
+archon workflow run setup
 ```
 
-The workflows will automatically use the new paths.
+**Note**: As of 2026-06-10, all framework references have been migrated from `~/.kiro/` to `~/.specs/` to better reflect the purpose (specifications, not project name).
 
 ## Bundled Defaults Regenerated
 

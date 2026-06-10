@@ -5,7 +5,7 @@ enforcement: mandatory
 
 # Project Organization Standards
 
-Reference examples: `~/.kiro/steering/project-organization-reference.md`
+Reference examples: `~/.specs/steering/project-organization-reference.md`
 
 ## Context
 

@@ -183,7 +183,7 @@ security_scanning:
       - name: "cfn-lint"
         command: "cfn-lint infrastructure/cloudformation/*.yml --format json"
       - name: "cfn-guard"
-        command: "cfn-guard validate --data infrastructure/cloudformation/*.yml --rules .kiro/config/cfn-guard-rules.guard"
+        command: "cfn-guard validate --data infrastructure/cloudformation/*.yml --rules .specs/config/cfn-guard-rules.guard"
 
   code_quality:
     enabled: true
@@ -247,7 +247,7 @@ processes:
     enabled: false
   secure_coding_guidelines:
     enabled: true
-    document_path: ".kiro/steering/security-compliance.md"
+    document_path: ".specs/steering/security-compliance.md"
   threat_modeling:
     enabled: false
   security_training:
@@ -281,6 +281,6 @@ pipeline_docs:
   tasks: "tasks.md"
   architecture: "ARCHITECTURE.md"
 steering_rules:
-  - ".kiro/steering/security-compliance.md"
-  - ".kiro/steering/infrastructure-standards.md"
-  - ".kiro/steering/naming-conventions.md"
+  - ".specs/steering/security-compliance.md"
+  - ".specs/steering/infrastructure-standards.md"
+  - ".specs/steering/naming-conventions.md"

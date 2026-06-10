@@ -30,7 +30,7 @@ Generate a GUID: `python3 -c "import secrets; print(secrets.token_hex(3)[:5])"`
 
 The profile is the source of truth for pipeline capabilities. AI scans the project only for:
 
-- **Steering rules** — `{project}/.kiro/steering/` (local) then `~/.kiro/steering/` (global)
+- **Steering rules** — `{project}/.specs/steering/` (local) then `~/.specs/steering/` (global)
 - **Existing compliance docs** — `docs/compliance-by-family/`
 
 The AI does NOT scan for pipeline IaC, buildspecs, scanner configs, or project feature specs (requirements.md, tasks.md). SSDF mappings document how the pipeline meets NIST controls — the profile contains all pipeline implementation details.
@@ -71,8 +71,8 @@ Profiles may reference files under `.kiro/` (steering rules, hooks, configs).
 These can live locally in the project or globally in the user's home directory.
 
 Search order:
-1. `{project}/.kiro/steering/`, `{project}/.kiro/hooks/`
-2. `~/.kiro/steering/`, `~/.kiro/hooks/`
+1. `{project}/.specs/steering/`, `{project}/.specs/hooks/`
+2. `~/.specs/steering/`, `~/.specs/hooks/`
 
 When a file is not found locally, the skill checks global paths as fallback.
 

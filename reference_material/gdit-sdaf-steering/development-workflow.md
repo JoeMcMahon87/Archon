@@ -5,7 +5,7 @@ enforcement: mandatory
 
 # Development Workflow
 
-Reference examples: `~/.kiro/steering/development-workflow-reference.md`
+Reference examples: `~/.specs/steering/development-workflow-reference.md`
 
 ## Context
 
@@ -37,9 +37,9 @@ Language-specific standards (version, validation tools, naming, security pattern
 
 ### Global Skills Directory
 
-- **Location**: `~/.kiro/skills/` (user home directory, not project-specific)
-- **Cache**: `~/.kiro/skills/.skills-cache.txt` (loaded on agent startup)
-- **Update Script**: `~/.kiro/skills/update-agent.py` (Python for cross-platform compatibility)
+- **Location**: `~/.specs/skills/` (user home directory, not project-specific)
+- **Cache**: `~/.specs/skills/.skills-cache.txt` (loaded on agent startup)
+- **Update Script**: `~/.specs/skills/update-agent.py` (Python for cross-platform compatibility)
 - **Refresh**: Daily automatic refresh, or manual with "reload skills" command
 - **Purpose**: Avoid project-specific compliance findings from skills configuration
 
@@ -273,7 +273,7 @@ When `.kiro/config/project.yaml` is missing:
    - `sysml`: `enabled: true, scope: both`
    - `well-architected`: `enabled: true`
    - `finops`: `enabled: true`
-   - `shared.registry-path`: `.kiro/registry/shared-registry.yaml`. If the registry file does not exist, the agent copies `~/.kiro/config/shared-registry-template.yaml` to `.kiro/registry/shared-registry.yaml`, scans the project to discover shared code, and customizes entries. The registry is always scaffolded — shared code reuse is a core development principle, not an opt-in feature.
+   - `shared.registry-path`: `.kiro/registry/shared-registry.yaml`. If the registry file does not exist, the agent copies `~/.specs/config/shared-registry-template.yaml` to `.kiro/registry/shared-registry.yaml`, scans the project to discover shared code, and customizes entries. The registry is always scaffolded — shared code reuse is a core development principle, not an opt-in feature.
 5. **Report what was created** — single summary line listing detected stack and key settings:
    ```
    Created .kiro/config/project.yaml — detected: Python (from requirements.txt), IaC (from *.yaml). Scanners: gitleaks, semgrep, trivy, checkov. Testing: disable. Spec source: gdit-sdaf.
@@ -351,7 +351,7 @@ When working with any file in the project:
 
 - **Read `spec-templates.md`** before creating or modifying any GDIT-SDAF spec file — it contains the exact patterns enforced by `validate-spec.py` (applies to `spec-source: gdit-sdaf` only)
 - **Verify project configuration** exists (`.kiro/config/project.yaml`) before creating or modifying specs — if missing, run initialization flow
-- **Auto-validate after spec changes** (`spec-source: gdit-sdaf` only): After creating or modifying any spec file (requirements.md, design.md, or tasks.md), immediately run `python3 ~/.kiro/scripts/validate-spec.py .kiro/specs/<feature>/` — do not wait until implementation to discover spec issues
+- **Auto-validate after spec changes** (`spec-source: gdit-sdaf` only): After creating or modifying any spec file (requirements.md, design.md, or tasks.md), immediately run `python3 ~/.specs/scripts/validate-spec.py .kiro/specs/<feature>/` — do not wait until implementation to discover spec issues
 - **Auto-validate after spec changes** (`spec-source: bmad`): Re-read the modified BMAD artifact and re-run the runtime mapping. Flag any new gaps (missing acceptance criteria, broken story-to-PRD references) to the user
 - **User confirmation before implementation**: After spec validation passes (gdit-sdaf) or gap check completes (bmad), present the results to the user and ask for confirmation before proceeding to implementation. The user must explicitly approve the spec before code is written
 - **Always check for existing specifications** in `.kiro/specs/` (gdit-sdaf) or BMAD artifact location (bmad) before making changes
@@ -397,11 +397,11 @@ Every element in `model.sysml` MUST add information that does NOT exist in the M
 
 5. **Compliance requirement definitions** — NIST 800-218 practices and NIST 800-171 controls as `requirement def` elements with formal `satisfy` relationships from implementation components. Creates a machine-queryable compliance graph for audit evidence. All compliance elements go in a dedicated `package ComplianceGraph { }` block at the end of model.sysml with constrained syntax optimized for regex extraction. See `spec-templates.md` for the ComplianceGraph block convention, two-zone structure, and strict doc string format.
 
-**T1/T2 Sub-Practice Classification**: Not all NIST 800-218 sub-practices are code-auditable. The ComplianceGraph MUST model only T1 (Pipeline-Assessable) sub-practices — those that can be evidenced through code, configuration, or pipeline artifacts. T2 (Organization-Deferred) sub-practices are organizational processes (HR training, vendor contracts, management commitment, endpoint hardening, vulnerability disclosure policy) that cannot be satisfied by code-based artifacts. See `~/.kiro/skills/ssdf-compliance-mapping/references/SUB-PRACTICE-TIERS.md` for the authoritative classification.
+**T1/T2 Sub-Practice Classification**: Not all NIST 800-218 sub-practices are code-auditable. The ComplianceGraph MUST model only T1 (Pipeline-Assessable) sub-practices — those that can be evidenced through code, configuration, or pipeline artifacts. T2 (Organization-Deferred) sub-practices are organizational processes (HR training, vendor contracts, management commitment, endpoint hardening, vulnerability disclosure policy) that cannot be satisfied by code-based artifacts. See `~/.specs/skills/ssdf-compliance-mapping/references/SUB-PRACTICE-TIERS.md` for the authoritative classification.
 
 - **T1 sub-practices**: Model in ComplianceGraph with `requirement def` + `satisfy` when design.md content triggers their catalog keywords
 - **T2 sub-practices** (PO.1.3, PO.2.1, PO.2.2, PO.2.3, PO.5.2, RV.1.3, RV.3.4): Do NOT model in ComplianceGraph — these are excluded from compliance validation findings
-- **Full T1 coverage**: When generating or updating a ComplianceGraph, cross-reference design.md content against the compliance pattern catalog (`~/.kiro/steering/compliance-pattern-catalog.md`). Every T1 sub-practice whose trigger keywords match design.md text MUST have a corresponding `requirement def` and `satisfy` relationship
+- **Full T1 coverage**: When generating or updating a ComplianceGraph, cross-reference design.md content against the compliance pattern catalog (`~/.specs/steering/compliance-pattern-catalog.md`). Every T1 sub-practice whose trigger keywords match design.md text MUST have a corresponding `requirement def` and `satisfy` relationship
 
 **scope: both** — All of the above.
 
@@ -417,7 +417,7 @@ After generating or updating `model.sysml`, the agent MUST cross-check design.md
 
 **Steps:**
 
-1. Scan `design.md` for trigger keywords from `~/.kiro/steering/compliance-pattern-catalog.md`
+1. Scan `design.md` for trigger keywords from `~/.specs/steering/compliance-pattern-catalog.md`
 2. For each T1 sub-practice whose keywords match: verify a corresponding `requirement def` and `satisfy` exist in the `ComplianceGraph` block. If missing, add them.
 3. For each `satisfy` in the ComplianceGraph: verify the matched sub-practice's trigger keywords appear in `design.md`. If missing, add the relevant keywords to the appropriate design section.
 4. Run `validate-spec.py` — it MUST produce zero SysML compliance warnings. If warnings remain, repeat steps 1–3 before proceeding.
@@ -453,7 +453,7 @@ See `spec-templates.md` for the `model.sysml` template pattern.
 
 #### When spec-source is `gdit-sdaf`:
 
-Run `python3 ~/.kiro/scripts/validate-spec.py .kiro/specs/<feature>/` at two points:
+Run `python3 ~/.specs/scripts/validate-spec.py .kiro/specs/<feature>/` at two points:
 
 1. **After spec creation/modification** — immediately after writing or updating any spec file
 2. **Before implementation** — as a gate before writing any code
@@ -472,7 +472,7 @@ The validator checks:
 - **Testing readiness**: Test configuration matches project.yaml testing mode
 - **Project configuration**: `.kiro/config/project.yaml` exists and testing mode is applied
 
-Use `--all` flag to validate all specs: `python3 ~/.kiro/scripts/validate-spec.py --all`
+Use `--all` flag to validate all specs: `python3 ~/.specs/scripts/validate-spec.py --all`
 
 ### Cross-Reference Validation
 
@@ -560,7 +560,7 @@ Format: `[type]: [summary]` + body with `Compliance:` and `Evidence:` fields
 
 After completing all subtasks in a task AND creating the git checkpoint, the agent MUST:
 
-1. Run: `python3 ~/.kiro/scripts/audit-steering-compliance.py .kiro/specs/<feature>/`
+1. Run: `python3 ~/.specs/scripts/audit-steering-compliance.py .kiro/specs/<feature>/`
 2. Include the full audit output in the response to the user
 3. If any check shows FAIL, remediate the failure before presenting the task as complete
 4. Only present the task as complete when audit shows 0 failures
@@ -571,7 +571,7 @@ After completing all subtasks in a task AND creating the git checkpoint, the age
 
 When the audit script output includes `SPEC COMPLETE` and `ACTION: Run two-layer verification`, the agent MUST immediately:
 
-1. Run `python3 ~/.kiro/scripts/validate-spec.py --verify .kiro/specs/<feature>/` (Layer 1)
+1. Run `python3 ~/.specs/scripts/validate-spec.py --verify .kiro/specs/<feature>/` (Layer 1)
 2. Perform the semantic verification pass (Layer 2) as defined in the IMPLEMENTATION VERIFICATION section below
 3. Generate `.kiro/specs/<feature>/VERIFICATION.md` with Script Results, Criterion Checklist, and Coverage Summary
 4. Stage and amend the git checkpoint to include VERIFICATION.md
@@ -876,7 +876,7 @@ When the user requests implementation verification (e.g., "verify implementation
 When `spec-source: gdit-sdaf`, run the validation script with `--verify`:
 
 ```
-python3 ~/.kiro/scripts/validate-spec.py --verify .kiro/specs/<feature>/
+python3 ~/.specs/scripts/validate-spec.py --verify .kiro/specs/<feature>/
 ```
 
 When `spec-source: bmad`, skip this step — proceed directly to Step 2. The deterministic checks (file existence, traceability markers) don't apply to BMAD format.
@@ -960,8 +960,8 @@ When a project has `.kiro/registry/shared-registry.yaml`:
 
 ### After Modifying Shared Code
 
-- RUN `python3 ~/.kiro/scripts/audit-component-usage.py` to check for consumer breakage
-- RUN `python3 ~/.kiro/scripts/audit-component-usage.py --diff` to detect regressions (removed exports, narrowed contracts)
+- RUN `python3 ~/.specs/scripts/audit-component-usage.py` to check for consumer breakage
+- RUN `python3 ~/.specs/scripts/audit-component-usage.py --diff` to detect regressions (removed exports, narrowed contracts)
 - UPDATE the registry if exports changed (add/remove entries in `exports` list)
 - UPDATE `migration-status` if consumers were migrated
 
@@ -1004,7 +1004,7 @@ The agent resolves DESIGN.md using a priority chain. First file found wins (no m
 
 1. **project.yaml `design-system.path`** → `<project-root>/<path>` (explicit override)
 2. **Local** → `<project-root>/.kiro/config/DESIGN.md` (per-project)
-3. **Global** → `~/.kiro/config/DESIGN.md` (cross-project default)
+3. **Global** → `~/.specs/config/DESIGN.md` (cross-project default)
 
 If no file is found at any location and `design-system.enabled: true`, the agent creates a starter DESIGN.md (see "When DESIGN.md is not found" below).
 
@@ -1164,7 +1164,7 @@ These are kiro-cli settings (not project-level). The script configures them idem
 One-time setup (run once after framework installation):
 
 ```bash
-python3 ~/.kiro/scripts/knowledge-init.py --configure-only
+python3 ~/.specs/scripts/knowledge-init.py --configure-only
 ```
 
 ## Success Metrics

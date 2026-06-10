@@ -1,13 +1,13 @@
 ---
 name: skill-installer
-description: Install skills from GitHub or local paths into ~/.kiro/skills. Use when a user asks to list installable skills, install a skill from a GitHub registry, or install from a local directory. Note: GitLab is not yet implemented.
+description: Install skills from GitHub or local paths into ~/.specs/skills. Use when a user asks to list installable skills, install a skill from a GitHub registry, or install from a local directory. Note: GitLab is not yet implemented.
 metadata:
   short-description: Install skills from GitHub or local paths (GitLab not yet implemented)
 ---
 
 # Skill Installer
 
-Install skills from multiple sources into `~/.kiro/skills/`.
+Install skills from multiple sources into `~/.specs/skills/`.
 
 > **Offline / air-gapped use**: Use `install-skill-from-local.py` with a pre-downloaded skill directory — it has no network dependencies at all.
 >
@@ -25,22 +25,22 @@ Install skills from multiple sources into `~/.kiro/skills/`.
 
 **List available skills from a GitHub registry:**
 ```
-python3 ~/.kiro/skills/skill-installer/scripts/list-skills.py --repo org/skills-catalog
+python3 ~/.specs/skills/skill-installer/scripts/list-skills.py --repo org/skills-catalog
 ```
 
 **Install from GitHub (repo + path):**
 ```
-python3 ~/.kiro/skills/skill-installer/scripts/install-skill-from-github.py --repo org/repo --path skills/my-skill
+python3 ~/.specs/skills/skill-installer/scripts/install-skill-from-github.py --repo org/repo --path skills/my-skill
 ```
 
 **Install from GitHub URL:**
 ```
-python3 ~/.kiro/skills/skill-installer/scripts/install-skill-from-github.py --url https://github.com/org/repo/tree/main/skills/my-skill
+python3 ~/.specs/skills/skill-installer/scripts/install-skill-from-github.py --url https://github.com/org/repo/tree/main/skills/my-skill
 ```
 
 **Install from local directory:**
 ```
-python3 ~/.kiro/skills/skill-installer/scripts/install-skill-from-local.py ./path/to/my-skill
+python3 ~/.specs/skills/skill-installer/scripts/install-skill-from-local.py ./path/to/my-skill
 ```
 
 After installing, restart the agent to pick up new skills.
@@ -65,4 +65,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/skill-installer/scripts/`.
+After setup, scripts are available at `~/.specs/skills/skill-installer/scripts/`.

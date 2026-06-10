@@ -535,7 +535,7 @@ This skill integrates with the GDIT framework's specification-driven development
 ## File Organization
 
 ```
-.kiro/specs/security-compliance/
+.specs/security-compliance/
 ├── requirements.md          # Security requirements (EARS notation)
 ├── design.md               # Technical architecture
 ├── tasks.md                # Implementation tasks
@@ -574,4 +574,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/aws-security-remediation/scripts/`.
+After setup, scripts are available at `~/.specs/skills/aws-security-remediation/scripts/`.

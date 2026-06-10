@@ -96,7 +96,7 @@ steps:
     expect: "The AI creates requirements.md with user stories and acceptance criteria."
     concept: "Each acceptance criterion becomes a test case."
     code:
-      - "python3 scripts/validate.py .kiro/specs/greeting/"
+      - "python3 scripts/validate.py .specs/greeting/"
     spec:
       - title: requirements.md
         content: |

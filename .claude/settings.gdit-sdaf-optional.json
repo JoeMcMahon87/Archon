@@ -5,7 +5,7 @@
     "hooks": [
       {
         "type": "command",
-        "command": "~/.kiro/claude-code/hooks/pre-commit-check.sh"
+        "command": "~/.specs/claude-code/hooks/pre-commit-check.sh"
       }
     ]
   }

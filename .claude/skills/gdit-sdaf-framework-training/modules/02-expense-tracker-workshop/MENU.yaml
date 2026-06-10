@@ -39,11 +39,11 @@ steps:
           and tasks. Explain how they connect.
       - label: Minimal
         prompt: |
-          Review the expense-tracker specs at .kiro/specs/expense-tracker/.
+          Review the expense-tracker specs at .specs/expense-tracker/.
     prompt: |
-      The exercise specs should already be at .kiro/specs/expense-tracker/.
+      The exercise specs should already be at .specs/expense-tracker/.
       If not, tell the participant to copy them:
-        cp -r docs/training/framework-training-workshop/specs/expense-tracker .kiro/specs/
+        cp -r docs/training/framework-training-workshop/specs/expense-tracker .specs/
 
       Read all three spec files and walk the participant through them:
 
@@ -71,7 +71,7 @@ steps:
           Run validate-spec.py on expense-tracker.
     prompt: |
       Run the spec validator:
-        python3 ~/.kiro/scripts/validate-spec.py .kiro/specs/expense-tracker/
+        python3 ~/.specs/scripts/validate-spec.py .specs/expense-tracker/
 
       Walk through the output line by line. All checks should pass (✅).
 
@@ -144,7 +144,7 @@ steps:
       - All tests should now pass
 
       After Task 3, run:
-        python3 ~/.kiro/scripts/audit-steering-compliance.py .kiro/specs/expense-tracker/
+        python3 ~/.specs/scripts/audit-steering-compliance.py .specs/expense-tracker/
       All 7 checks should pass.
 
   - id: verify
@@ -159,7 +159,7 @@ steps:
           Verify expense-tracker.
     prompt: |
       Run two-layer verification:
-        python3 ~/.kiro/scripts/validate-spec.py --verify .kiro/specs/expense-tracker/
+        python3 ~/.specs/scripts/validate-spec.py --verify .specs/expense-tracker/
 
       Then perform the semantic verification pass:
       - Read every acceptance criterion from completed REQs
@@ -168,7 +168,7 @@ steps:
       - For each criterion, verify the code implements it with file:line evidence
       - Produce per-requirement verdict: IMPLEMENTED / PARTIAL / NOT IMPLEMENTED
 
-      Generate .kiro/specs/expense-tracker/VERIFICATION.md with:
+      Generate .specs/expense-tracker/VERIFICATION.md with:
       - Script Results section
       - Criterion Checklist table (one row per acceptance criterion)
       - Coverage Summary

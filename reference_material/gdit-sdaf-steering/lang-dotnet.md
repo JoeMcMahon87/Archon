@@ -5,7 +5,7 @@ enforcement: mandatory
 
 # .NET / C# Language Standards
 
-Reference examples: `~/.kiro/steering/lang-dotnet-reference.md`
+Reference examples: `~/.specs/steering/lang-dotnet-reference.md`
 
 ## Context
 

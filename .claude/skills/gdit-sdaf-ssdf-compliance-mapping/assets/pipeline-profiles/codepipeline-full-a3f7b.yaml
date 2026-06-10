@@ -175,7 +175,7 @@ security_scanning:
       - name: "cfn-lint"
         command: "cfn-lint infrastructure/cloudformation/*.yml --format json"
       - name: "cfn-guard"
-        command: "cfn-guard validate --data infrastructure/cloudformation/*.yml --rules .kiro/config/cfn-guard-rules.guard"
+        command: "cfn-guard validate --data infrastructure/cloudformation/*.yml --rules .specs/config/cfn-guard-rules.guard"
 
   dast:
     enabled: false
@@ -223,8 +223,8 @@ processes:
     enabled: false
   secure_coding_guidelines:
     enabled: true
-    # Resolve path: check {project}/.kiro/steering/ first, then ~/.kiro/steering/
-    document_path: ".kiro/steering/security-compliance.md"
+    # Resolve path: check {project}/.specs/steering/ first, then ~/.specs/steering/
+    document_path: ".specs/steering/security-compliance.md"
   threat_modeling:
     enabled: false
   security_training:
@@ -255,8 +255,8 @@ known_gaps:
   - sub_practice: "PS.2.1"
     description: "GPG signing only — no public CA (X.509) code signing certificate for external distribution. Third-party CA (e.g., DigiCert, Sectigo) required before external software distribution. Internal distribution is unaffected."
 
-# Path resolution: for .kiro/ paths below, check {project}/.kiro/ first,
-# then ~/.kiro/ (global). Applies to steering rules only.
+# Path resolution: for .kiro/ paths below, check {project}/.specs/ first,
+# then ~/.specs/ (global). Applies to steering rules only.
 # Scanner configurations come from the profile's security_scanning section.
 # NOTE: requirements, tasks, and architecture are pipeline-project docs
 # used when this profile was built. Consumer projects do NOT have these.
@@ -266,6 +266,6 @@ pipeline_docs:
   tasks: "tasks.md"
   architecture: "ARCHITECTURE.md"
 steering_rules:
-  - ".kiro/steering/security-compliance.md"
-  - ".kiro/steering/infrastructure-standards.md"
-  - ".kiro/steering/naming-conventions.md"
+  - ".specs/steering/security-compliance.md"
+  - ".specs/steering/infrastructure-standards.md"
+  - ".specs/steering/naming-conventions.md"

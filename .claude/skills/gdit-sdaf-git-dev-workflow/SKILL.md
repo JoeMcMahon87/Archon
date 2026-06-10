@@ -53,7 +53,7 @@ Standard workflow for pushing changes. ALWAYS use the script — never run raw `
 uv run scripts/commit-and-mr.py
 
 # Or with python3
-python3 ~/.kiro/skills/git-dev-workflow/scripts/commit-and-mr.py
+python3 ~/.specs/skills/git-dev-workflow/scripts/commit-and-mr.py
 
 # Non-interactive mode
 uv run scripts/commit-and-mr.py \
@@ -78,7 +78,7 @@ Run all security scanners before committing:
 uv run scripts/pre-commit-validate.py --install-missing
 
 # Or with python3
-python3 ~/.kiro/skills/git-dev-workflow/scripts/pre-commit-validate.py --install-missing
+python3 ~/.specs/skills/git-dev-workflow/scripts/pre-commit-validate.py --install-missing
 ```
 
 **Automatic .gitignore management**: The script automatically:
@@ -111,7 +111,7 @@ Recommended first action every day — pulls remote dev branch updates and syncs
 
 ```bash
 uv run scripts/sync-with-main.py [rebase|merge]
-# Or: python3 ~/.kiro/skills/git-dev-workflow/scripts/sync-with-main.py
+# Or: python3 ~/.specs/skills/git-dev-workflow/scripts/sync-with-main.py
 ```
 
 This will:
@@ -127,7 +127,7 @@ Remove local and remote branches that have been merged:
 
 ```bash
 uv run scripts/cleanup-merged-branches.py [--no-dry-run] [--delete-remote]
-# Or: python3 ~/.kiro/skills/git-dev-workflow/scripts/cleanup-merged-branches.py
+# Or: python3 ~/.specs/skills/git-dev-workflow/scripts/cleanup-merged-branches.py
 ```
 
 This will:
@@ -142,7 +142,7 @@ Install all required scanners:
 
 ```bash
 uv run scripts/install-scanners.py [scanner-name ...]
-# Or: python3 ~/.kiro/skills/git-dev-workflow/scripts/install-scanners.py
+# Or: python3 ~/.specs/skills/git-dev-workflow/scripts/install-scanners.py
 ```
 
 Auto-installs missing tools needed for validation.
@@ -153,19 +153,19 @@ Store, test, and manage git authentication credentials:
 
 ```bash
 # Guided setup (detects remote, prompts for token, validates)
-python3 ~/.kiro/skills/git-dev-workflow/scripts/manage-credentials.py setup
+python3 ~/.specs/skills/git-dev-workflow/scripts/manage-credentials.py setup
 
 # CRUD operations
-python3 ~/.kiro/skills/git-dev-workflow/scripts/manage-credentials.py list
-python3 ~/.kiro/skills/git-dev-workflow/scripts/manage-credentials.py set https://gitlab.example.com --username deploy-bot --token glpat-...
-python3 ~/.kiro/skills/git-dev-workflow/scripts/manage-credentials.py test https://gitlab.example.com
-python3 ~/.kiro/skills/git-dev-workflow/scripts/manage-credentials.py delete https://gitlab.example.com
+python3 ~/.specs/skills/git-dev-workflow/scripts/manage-credentials.py list
+python3 ~/.specs/skills/git-dev-workflow/scripts/manage-credentials.py set https://gitlab.example.com --username deploy-bot --token glpat-...
+python3 ~/.specs/skills/git-dev-workflow/scripts/manage-credentials.py test https://gitlab.example.com
+python3 ~/.specs/skills/git-dev-workflow/scripts/manage-credentials.py delete https://gitlab.example.com
 
 # Migrate from local file to AWS Secrets Manager
-python3 ~/.kiro/skills/git-dev-workflow/scripts/manage-credentials.py migrate --from local --to secrets-manager
+python3 ~/.specs/skills/git-dev-workflow/scripts/manage-credentials.py migrate --from local --to secrets-manager
 ```
 
-Supports local file (`~/.gdit-sdaf-secrets/git-credentials.json`) and AWS Secrets Manager backends. Configure in `.kiro/config/project.yaml`:
+Supports local file (`~/.gdit-sdaf-secrets/git-credentials.json`) and AWS Secrets Manager backends. Configure in `.specs/config/project.yaml`:
 
 ```yaml
 git-remote:
@@ -222,4 +222,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/git-dev-workflow/scripts/`.
+After setup, scripts are available at `~/.specs/skills/git-dev-workflow/scripts/`.

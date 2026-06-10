@@ -366,20 +366,20 @@ GITLAB_TOKEN="$2"
 GITLAB_URL="${3:-https://gitlab.com}"
 
 # Step 1: Configure project
-python3 ~/.kiro/skills/gitlab-security-scanning/scripts/configure_projects.py --project-id "$PROJECT_ID" --gitlab-url "$GITLAB_URL"
+python3 ~/.specs/skills/gitlab-security-scanning/scripts/configure_projects.py --project-id "$PROJECT_ID" --gitlab-url "$GITLAB_URL"
 
 # Step 2: Scan for findings
-python3 ~/.kiro/skills/gitlab-security-scanning/scripts/scan_findings.py --project-id "$PROJECT_ID" --token "$GITLAB_TOKEN"
+python3 ~/.specs/skills/gitlab-security-scanning/scripts/scan_findings.py --project-id "$PROJECT_ID" --token "$GITLAB_TOKEN"
 
 # Step 3: Auto-remediate
-python3 ~/.kiro/skills/gitlab-security-scanning/scripts/auto_remediate.py --project-id "$PROJECT_ID" --token "$GITLAB_TOKEN"
+python3 ~/.specs/skills/gitlab-security-scanning/scripts/auto_remediate.py --project-id "$PROJECT_ID" --token "$GITLAB_TOKEN"
 
 # Step 4: Mark false positives (interactive)
-python3 ~/.kiro/skills/gitlab-security-scanning/scripts/mark_false_positives.py --project-id "$PROJECT_ID" --token "$GITLAB_TOKEN"
+python3 ~/.specs/skills/gitlab-security-scanning/scripts/mark_false_positives.py --project-id "$PROJECT_ID" --token "$GITLAB_TOKEN"
 
 # Step 5: Generate reports
-python3 ~/.kiro/skills/gitlab-security-scanning/scripts/generate_posture_report.py --token "$GITLAB_TOKEN"
-python3 ~/.kiro/skills/gitlab-security-scanning/scripts/generate_executive_report.py --project-id "$PROJECT_ID" --token "$GITLAB_TOKEN"
+python3 ~/.specs/skills/gitlab-security-scanning/scripts/generate_posture_report.py --token "$GITLAB_TOKEN"
+python3 ~/.specs/skills/gitlab-security-scanning/scripts/generate_executive_report.py --project-id "$PROJECT_ID" --token "$GITLAB_TOKEN"
 
 echo "✓ Remediation workflow complete"
 ```
@@ -476,7 +476,7 @@ This skill integrates with the GDIT framework's specification-driven development
 ## File Organization
 
 ```
-.kiro/skills/gitlab-security-scanning/
+.specs/skills/gitlab-security-scanning/
 ├── SKILL.md                    # This file
 ├── MENU.yaml                   # Interactive menu
 ├── scripts/                    # Remediation scripts
@@ -522,4 +522,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/gitlab-security-scanning/scripts/`.
+After setup, scripts are available at `~/.specs/skills/gitlab-security-scanning/scripts/`.

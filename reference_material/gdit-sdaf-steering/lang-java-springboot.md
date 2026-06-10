@@ -5,7 +5,7 @@ enforcement: mandatory
 
 # Java / Spring Boot Language Standards
 
-Reference examples: `~/.kiro/steering/lang-java-springboot-reference.md`
+Reference examples: `~/.specs/steering/lang-java-springboot-reference.md`
 
 ## Context
 

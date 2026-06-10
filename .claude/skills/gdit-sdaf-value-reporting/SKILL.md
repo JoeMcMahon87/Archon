@@ -6,34 +6,34 @@ license: MIT
 
 # Value Reporting
 
-Aggregate and report AI-assisted development value tracked in tasks.md effort tables across `.kiro/specs/`.
+Aggregate and report AI-assisted development value tracked in tasks.md effort tables across `.specs/`.
 
 ## Quick Start
 
 ```bash
 # Project summary
-python3 ~/.kiro/skills/value-reporting/scripts/value_report.py --scope project
+python3 ~/.specs/skills/value-reporting/scripts/value_report.py --scope project
 
 # Feature detail for a specific spec
-python3 ~/.kiro/skills/value-reporting/scripts/value_report.py --scope feature --spec user-auth --detail
+python3 ~/.specs/skills/value-reporting/scripts/value_report.py --scope feature --spec user-auth --detail
 
 # Monthly trend analysis
-python3 ~/.kiro/skills/value-reporting/scripts/value_report.py --trend --period monthly
+python3 ~/.specs/skills/value-reporting/scripts/value_report.py --trend --period monthly
 
 # Estimation accuracy
-python3 ~/.kiro/skills/value-reporting/scripts/value_report.py --accuracy
+python3 ~/.specs/skills/value-reporting/scripts/value_report.py --accuracy
 
 # Dashboard summary
-python3 ~/.kiro/skills/value-reporting/scripts/value_report.py --dashboard
+python3 ~/.specs/skills/value-reporting/scripts/value_report.py --dashboard
 
 # Task status
-python3 ~/.kiro/skills/value-reporting/scripts/value_report.py --status
+python3 ~/.specs/skills/value-reporting/scripts/value_report.py --status
 
 # Update Value Summary table in a spec
-python3 ~/.kiro/skills/value-reporting/scripts/value_report.py --update-summary --spec feature-name
+python3 ~/.specs/skills/value-reporting/scripts/value_report.py --update-summary --spec feature-name
 
 # Export as JSON
-python3 ~/.kiro/skills/value-reporting/scripts/value_report.py --scope project --format json --output report.json
+python3 ~/.specs/skills/value-reporting/scripts/value_report.py --scope project --format json --output report.json
 ```
 
 ## CLI Flags
@@ -55,7 +55,7 @@ python3 ~/.kiro/skills/value-reporting/scripts/value_report.py --scope project -
 | `--dashboard` | flag | off | Compact summary |
 | `--status` | flag | off | Task completion status |
 | `--output` | path | stdout | Write to file |
-| `--specs-dir` | path | `.kiro/specs/` | Override specs directory |
+| `--specs-dir` | path | `.specs/` | Override specs directory |
 
 ## Report Types
 
@@ -95,4 +95,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/value-reporting/scripts/`.
+After setup, scripts are available at `~/.specs/skills/value-reporting/scripts/`.

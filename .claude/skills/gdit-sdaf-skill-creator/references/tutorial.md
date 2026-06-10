@@ -7,7 +7,7 @@
 ## Prerequisites
 
 - GDIT framework loaded (you're using it now)
-- `~/.kiro/skills/skill-creator/` installed
+- `~/.specs/skills/skill-creator/` installed
 - Python 3.12+
 
 ---
@@ -19,7 +19,7 @@
 Create the spec directory for your tutorial skill:
 
 ```bash
-mkdir -p .kiro/specs/greeting-skill
+mkdir -p .specs/greeting-skill
 ```
 
 This is where your requirements, design, and tasks live. The GDIT framework workflow is:
@@ -31,7 +31,7 @@ This is where your requirements, design, and tasks live. The GDIT framework work
 
 **GDIT framework concept**: Requirements format, acceptance criteria, user stories.
 
-Create `.kiro/specs/greeting-skill/requirements.md`:
+Create `.specs/greeting-skill/requirements.md`:
 
 ```markdown
 # Greeting Skill — Requirements
@@ -79,7 +79,7 @@ Create `.kiro/specs/greeting-skill/requirements.md`:
 
 **GDIT framework concept**: Design traceability, correctness properties, implementation mapping.
 
-Create `.kiro/specs/greeting-skill/design.md`:
+Create `.specs/greeting-skill/design.md`:
 
 ```markdown
 # Greeting Skill — Design
@@ -143,7 +143,7 @@ Two workflows:
 
 **GDIT framework concept**: Task format, effort tracking, traceability to requirements and design.
 
-Create `.kiro/specs/greeting-skill/tasks.md`:
+Create `.specs/greeting-skill/tasks.md`:
 
 ```markdown
 # Greeting Skill — Tasks
@@ -201,7 +201,7 @@ Create `.kiro/specs/greeting-skill/tasks.md`:
 
 **GDIT framework concept**: SysML v2 formal modeling — adds machine-parseable constraints beyond prose.
 
-Create `.kiro/specs/greeting-skill/model.sysml`:
+Create `.specs/greeting-skill/model.sysml`:
 
 ```sysml
 package GreetingSkill {
@@ -281,7 +281,7 @@ package GreetingSkill {
 Run the spec validator:
 
 ```bash
-python3 ~/.kiro/scripts/validate-spec.py .kiro/specs/greeting-skill/
+python3 ~/.specs/scripts/validate-spec.py .specs/greeting-skill/
 ```
 
 **Expected output** (all green):
@@ -315,15 +315,15 @@ Fix any issues and re-run until all gates pass.
 ### Step 6a: Scaffold the skill
 
 ```bash
-python3 ~/.kiro/skills/skill-creator/scripts/init_skill.py greeting-skill \
-  --path ~/.kiro/skills \
+python3 ~/.specs/skills/skill-creator/scripts/init_skill.py greeting-skill \
+  --path ~/.specs/skills \
   --resources scripts,references \
   --menu
 ```
 
 ### Step 6b: Write greet.py
 
-Replace `~/.kiro/skills/greeting-skill/scripts/example.py` with `scripts/greet.py`:
+Replace `~/.specs/skills/greeting-skill/scripts/example.py` with `scripts/greet.py`:
 
 ```python
 #!/usr/bin/env python3
@@ -377,12 +377,12 @@ if __name__ == "__main__":
 
 Delete the example.py placeholder:
 ```bash
-rm ~/.kiro/skills/greeting-skill/scripts/example.py
+rm ~/.specs/skills/greeting-skill/scripts/example.py
 ```
 
 ### Step 6c: Write formats reference
 
-Create `~/.kiro/skills/greeting-skill/references/formats.md`:
+Create `~/.specs/skills/greeting-skill/references/formats.md`:
 
 ```markdown
 # Greeting Formats
@@ -489,13 +489,13 @@ workflows:
 
 ```bash
 # Syntax check
-python3 -m py_compile ~/.kiro/skills/greeting-skill/scripts/greet.py
+python3 -m py_compile ~/.specs/skills/greeting-skill/scripts/greet.py
 
 # Lint
-ruff check ~/.kiro/skills/greeting-skill/scripts/greet.py
+ruff check ~/.specs/skills/greeting-skill/scripts/greet.py
 
 # Secrets scan
-gitleaks detect --source ~/.kiro/skills/greeting-skill/scripts/ --no-git --verbose
+gitleaks detect --source ~/.specs/skills/greeting-skill/scripts/ --no-git --verbose
 ```
 
 All should pass with zero findings.
@@ -509,7 +509,7 @@ All should pass with zero findings.
 ### Step 7a: Run structural validation
 
 ```bash
-python3 ~/.kiro/skills/skill-creator/scripts/quick_validate.py ~/.kiro/skills/greeting-skill
+python3 ~/.specs/skills/skill-creator/scripts/quick_validate.py ~/.specs/skills/greeting-skill
 ```
 
 **Expected**: `✅ Skill is valid!`
@@ -517,9 +517,9 @@ python3 ~/.kiro/skills/skill-creator/scripts/quick_validate.py ~/.kiro/skills/gr
 ### Step 7b: Test the script
 
 ```bash
-python3 ~/.kiro/skills/greeting-skill/scripts/greet.py Alice
-python3 ~/.kiro/skills/greeting-skill/scripts/greet.py Bob --format formal
-python3 ~/.kiro/skills/greeting-skill/scripts/greet.py Charlie --format celebration
+python3 ~/.specs/skills/greeting-skill/scripts/greet.py Alice
+python3 ~/.specs/skills/greeting-skill/scripts/greet.py Bob --format formal
+python3 ~/.specs/skills/greeting-skill/scripts/greet.py Charlie --format celebration
 ```
 
 ### Step 7c: Run quality review
@@ -543,6 +543,6 @@ You've just created a complete skill using the GDIT spec-driven workflow:
 ## Next Steps
 
 - **Customize**: Modify greeting-skill to add more formats or features
-- **Delete**: Remove `~/.kiro/skills/greeting-skill/` and `.kiro/specs/greeting-skill/` if you don't need it
+- **Delete**: Remove `~/.specs/skills/greeting-skill/` and `.specs/greeting-skill/` if you don't need it
 - **Create your own**: Use the skill-creator workflows to build a skill for your real use case
 - **Publish**: Share your skill via GitHub/GitLab for others to install with skill-installer

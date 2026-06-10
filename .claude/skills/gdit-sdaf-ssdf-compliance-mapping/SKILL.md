@@ -156,7 +156,7 @@ When the project changes (new tool, closed gap, new stage):
 When `sysml.enabled: true` in `project.yaml` and `model.sysml` files contain `package ComplianceGraph { }` blocks, the skill reads satisfy/verify relationships and corporate policy references directly from requirement def doc strings. This provides a structured, machine-parseable evidence layer on top of the pipeline profile.
 
 **How it works:**
-- `create-family-mapping` scans `.kiro/specs/*/model.sysml` for ComplianceGraph blocks targeting the requested family's practices. Satisfy relationships build a component-to-practice map. Corporate policy references come directly from doc strings (no catalog lookup needed). Results appear as a "SysML Graph Evidence" subsection in each sub-practice mapping.
+- `create-family-mapping` scans `.specs/*/model.sysml` for ComplianceGraph blocks targeting the requested family's practices. Satisfy relationships build a component-to-practice map. Corporate policy references come directly from doc strings (no catalog lookup needed). Results appear as a "SysML Graph Evidence" subsection in each sub-practice mapping.
 - `analyze-gaps` classifies gaps into three tiers when ComplianceGraph data is available: Implementation gap (no satisfy), Test gap (satisfy but no verify), Evidence gap (satisfy + verify but no commit evidence).
 - `validate-docs` checks that practices marked ✅ Implemented have at least one satisfy relationship in a ComplianceGraph block.
 
@@ -179,4 +179,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/ssdf-compliance-mapping/scripts/`.
+After setup, scripts are available at `~/.specs/skills/ssdf-compliance-mapping/scripts/`.

@@ -89,7 +89,7 @@ Called at start of `main()` before running any scanners.
 
 ```bash
 $ cd /path/to/any-project
-$ python3.12 ~/.kiro/skills/git-dev-workflow/scripts/pre-commit-validate.py
+$ python3.12 ~/.specs/skills/git-dev-workflow/scripts/pre-commit-validate.py
 
 ✓ Added .security-scans/ to .gitignore
 
@@ -134,13 +134,13 @@ cat .gitignore | grep security-scans
 
 ## Files Modified
 
-1. **~/.kiro/skills/git-dev-workflow/scripts/pre-commit-validate.py**
+1. **~/.specs/skills/git-dev-workflow/scripts/pre-commit-validate.py**
    - Added `ensure_gitignore()` function
    - Calls it before running scanners
    - Creates/updates .gitignore automatically
    - All scanners output to `.security-scans/`
 
-2. **~/.kiro/skills/git-dev-workflow/SKILL.md**
+2. **~/.specs/skills/git-dev-workflow/SKILL.md**
    - Documented automatic .gitignore management
    - Explained self-healing behavior
 

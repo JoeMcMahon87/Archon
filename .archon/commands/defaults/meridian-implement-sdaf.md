@@ -132,7 +132,7 @@ Fix any failures. Do not proceed until all pass.
 ## Phase 5: GDIT POST-TASK AUDIT (GDIT MODE ONLY)
 
 ```bash
-python3 ~/.kiro/scripts/audit-steering-compliance.py .meridian/specs/<feature>/
+python3 ~/.specs/scripts/audit-steering-compliance.py .meridian/specs/<feature>/
 ```
 
 Report all PASS/FAIL/WARN/SKIP results. If any FAIL: remediate before declaring complete.

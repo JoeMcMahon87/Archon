@@ -9,7 +9,7 @@ gitlab-dev-workflow → git-dev-workflow
 
 ### Directory Structure
 ```
-.kiro/skills/gitlab-dev-workflow/ → .kiro/skills/git-dev-workflow/
+.specs/skills/gitlab-dev-workflow/ → .specs/skills/git-dev-workflow/
 ```
 
 ### Load Command

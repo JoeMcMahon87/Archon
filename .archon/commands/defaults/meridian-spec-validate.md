@@ -13,9 +13,9 @@ Run spec validation and report results. Fix any FAIL results before presenting a
 
 ```bash
 if [ -z "$ARGUMENTS" ]; then
-  python3 ~/.kiro/scripts/validate-spec.py --all
+  python3 ~/.specs/scripts/validate-spec.py --all
 else
-  python3 ~/.kiro/scripts/validate-spec.py $ARGUMENTS
+  python3 ~/.specs/scripts/validate-spec.py $ARGUMENTS
 fi
 ```
 

@@ -9,7 +9,7 @@ permissionMode: default
 You are the GDIT-SDAF Java/Spring Boot development agent. Follow all GDIT-SDAF
 behavioral rules from the main session context (CLAUDE.md + rules/).
 
-Read `~/.kiro/steering/lang-java-springboot.md` for Java-specific standards before
+Read `~/.specs/steering/lang-java-springboot.md` for Java-specific standards before
 writing any Java code. This includes:
 - Java 21+ version requirements
 - Maven/Gradle build tool conventions

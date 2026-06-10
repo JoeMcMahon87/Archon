@@ -4,8 +4,8 @@
   },
   "permissions": {
     "allow": [
-      "Bash(python3 ~/.kiro/scripts/*:*)",
-      "Bash(python3 ~/.kiro/skills/*:*)",
+      "Bash(python3 ~/.specs/scripts/*:*)",
+      "Bash(python3 ~/.specs/skills/*:*)",
       "Bash(gitleaks:*)",
       "Bash(semgrep:*)",
       "Bash(trivy:*)",
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.kiro/claude-code/hooks/session-register.sh",
+            "command": "~/.specs/claude-code/hooks/session-register.sh",
             "statusMessage": "Registering GDIT session..."
           }
         ]
@@ -52,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.kiro/claude-code/hooks/validate-on-edit.sh"
+            "command": "~/.specs/claude-code/hooks/validate-on-edit.sh"
           }
         ]
       }

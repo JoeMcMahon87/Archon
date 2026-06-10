@@ -6,7 +6,7 @@ enforcement: mandatory
 
 # Infrastructure Standards
 
-Reference examples: `~/.kiro/steering/infrastructure-standards-reference.md`
+Reference examples: `~/.specs/steering/infrastructure-standards-reference.md`
 
 ## Context
 

@@ -28,10 +28,10 @@ The YAML file is the artifact you edit. The script is a generic converter.
 
 ```bash
 # Convert YAML to PPTX
-python3 ~/.kiro/skills/pptx-creator/scripts/yaml_to_pptx.py content.yaml
+python3 ~/.specs/skills/pptx-creator/scripts/yaml_to_pptx.py content.yaml
 
 # Specify output path
-python3 ~/.kiro/skills/pptx-creator/scripts/yaml_to_pptx.py content.yaml -o deck.pptx
+python3 ~/.specs/skills/pptx-creator/scripts/yaml_to_pptx.py content.yaml -o deck.pptx
 ```
 
 ## Schema
@@ -46,4 +46,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/pptx-creator/scripts/`.
+After setup, scripts are available at `~/.specs/skills/pptx-creator/scripts/`.

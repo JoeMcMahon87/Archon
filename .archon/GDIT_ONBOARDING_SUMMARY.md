@@ -262,14 +262,16 @@ For users with existing `.kiro/` installations:
 # 1. Backup
 cp -r ~/.kiro ~/.kiro.backup
 
-# 2. Run new onboarding
+# 2. Migrate to new location (as of 2026-06-10)
+mv ~/.kiro ~/.specs
+
+# 3. Run verification
 archon workflow run onboard
 
-# 3. Remove old (optional)
-rm -rf ~/.kiro
+# Note: All framework references now use ~/.specs/ instead of ~/.kiro/
 ```
 
-The new onboarding creates `~/.archon/` with proper structure.
+The new onboarding creates `~/.archon/` with proper structure and `~/.specs/` for GDIT-SDAF artifacts.
 
 ## Next Steps for Users
 

@@ -13,10 +13,10 @@ HTML companion page that students can use to navigate the course independently.
 
 ## Quick Start
 
-1. **Create**: `python3 ~/.kiro/skills/training-module-creator/scripts/init_module.py --name my-module --path /target/modules/`
+1. **Create**: `python3 ~/.specs/skills/training-module-creator/scripts/init_module.py --name my-module --path /target/modules/`
 2. **Author**: Edit the generated MENU.yaml — add steps with prompts and variations
-3. **Build HTML**: `python3 ~/.kiro/skills/training-module-creator/scripts/build_html.py --module /target/modules/NN-my-module/`
-4. **Validate**: `python3 ~/.kiro/skills/training-module-creator/scripts/validate_module.py /target/modules/NN-my-module/`
+3. **Build HTML**: `python3 ~/.specs/skills/training-module-creator/scripts/build_html.py --module /target/modules/NN-my-module/`
+4. **Validate**: `python3 ~/.specs/skills/training-module-creator/scripts/validate_module.py /target/modules/NN-my-module/`
 
 ## Module Structure
 
@@ -69,7 +69,7 @@ portable and drop-in ready. It provides:
 - "What to Expect" and "Key Concept" callouts
 - Responsive design with print-friendly CSS
 
-Regenerate after any MENU.yaml change: `python3 ~/.kiro/skills/training-module-creator/scripts/build_html.py --module <dir>`
+Regenerate after any MENU.yaml change: `python3 ~/.specs/skills/training-module-creator/scripts/build_html.py --module <dir>`
 
 ## Prerequisites
 
@@ -79,4 +79,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/training-module-creator/scripts/`.
+After setup, scripts are available at `~/.specs/skills/training-module-creator/scripts/`.

@@ -103,7 +103,7 @@ workflows:
          The last step should have `"summary": true`.
 
       4. Write the JSON to a temp file, then run:
-         python3 ~/.kiro/skills/training-module-creator/scripts/init_module.py --name <name> --path <path> --steps <json-file>
+         python3 ~/.specs/skills/training-module-creator/scripts/init_module.py --name <name> --path <path> --steps <json-file>
 
       5. Show the created files. Remind the user to:
          - Review and refine the generated MENU.yaml prompts
@@ -126,7 +126,7 @@ workflows:
       Generate an HTML companion page for a training module.
 
       1. Ask for the module directory path
-      2. Run: python3 ~/.kiro/skills/training-module-creator/scripts/build_html.py --module <path>
+      2. Run: python3 ~/.specs/skills/training-module-creator/scripts/build_html.py --module <path>
       3. Report the output file location
       4. Explain: the HTML is generated from MENU.yaml (single source of truth)
          and lives inside the module folder for portability
@@ -146,7 +146,7 @@ workflows:
       Validate a training module for completeness and correctness.
 
       1. Ask for the module directory path
-      2. Run: python3 ~/.kiro/skills/training-module-creator/scripts/validate_module.py <path>
+      2. Run: python3 ~/.specs/skills/training-module-creator/scripts/validate_module.py <path>
       3. Show the results and explain any failures
       4. If course.html is missing or stale, suggest running build_html.py
     variations:

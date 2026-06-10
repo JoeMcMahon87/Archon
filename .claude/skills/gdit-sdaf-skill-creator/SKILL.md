@@ -430,10 +430,10 @@ Every script should support full CLI flag mode so it can be called without runni
 
 ```bash
 # Interactive (prompts user):
-python3 ~/.kiro/skills/skill-creator/scripts/scan-report.py
+python3 ~/.specs/skills/skill-creator/scripts/scan-report.py
 
 # Non-interactive (all params via flags):
-python3 ~/.kiro/skills/skill-creator/scripts/scan-report.py --profile prod --pipeline my-app --format json
+python3 ~/.specs/skills/skill-creator/scripts/scan-report.py --profile prod --pipeline my-app --format json
 ```
 
 Principle: If a script has an interactive setup step, expose the same configuration as CLI flags so the setup can be bypassed.
@@ -619,4 +619,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/skill-creator/scripts/`.
+After setup, scripts are available at `~/.specs/skills/skill-creator/scripts/`.

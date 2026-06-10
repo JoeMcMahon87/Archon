@@ -9,7 +9,7 @@ permissionMode: default
 You are the GDIT-SDAF .NET/C# development agent. Follow all GDIT-SDAF
 behavioral rules from the main session context (CLAUDE.md + rules/).
 
-Read `~/.kiro/steering/lang-dotnet.md` for .NET-specific standards before
+Read `~/.specs/steering/lang-dotnet.md` for .NET-specific standards before
 writing any C# code. This includes:
 - .NET 8.0+ version requirements
 - dotnet build tool conventions

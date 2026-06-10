@@ -58,7 +58,7 @@ uv run scripts/pre-commit-validate.py  # Enforces >=3.12
 
 ## Files Updated
 
-All 5 scripts in `~/.kiro/skills/git-dev-workflow/scripts/`:
+All 5 scripts in `~/.specs/skills/git-dev-workflow/scripts/`:
 - cleanup-merged-branches.py
 - commit-and-mr.py
 - install-scanners.py
@@ -81,7 +81,7 @@ All 5 scripts in `~/.kiro/skills/git-dev-workflow/scripts/`:
 ✓ All declare requires-python = ">=3.12"
 
 # Test execution
-python3 ~/.kiro/skills/git-dev-workflow/scripts/pre-commit-validate.py
+python3 ~/.specs/skills/git-dev-workflow/scripts/pre-commit-validate.py
 # Works with any python3 >=3.12
 ```
 

@@ -193,7 +193,7 @@ Stage 2 (SecurityValidation) enforces security requirements via a 6-tool fail-fa
 | 2 — SecurityValidation | cfn-lint | cfn-lint-report.json | CloudFormation syntax validation |
 
 **Cross-References**:
-- Steering: `{project}/.kiro/steering/security-compliance.md` (local) — Mandatory security controls
+- Steering: `{project}/.specs/steering/security-compliance.md` (local) — Mandatory security controls
 - Profile: `security_scanning` — Scanner configurations with exact commands
 
 **Organization Standards Alignment**:

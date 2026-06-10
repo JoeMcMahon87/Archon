@@ -25,16 +25,16 @@ Provides machine-queryable access to NIST SP 800-218 compliance evidence stored 
 
 ## How It Works
 
-All scripts read `.kiro/specs/*/model.sysml` files and extract `package ComplianceGraph {}` blocks. The shared `sysml_graph.py` parser (in `~/.kiro/scripts/`) handles parsing; this skill adds the query and reporting layer.
+All scripts read `.specs/*/model.sysml` files and extract `package ComplianceGraph {}` blocks. The shared `sysml_graph.py` parser (in `~/.specs/scripts/`) handles parsing; this skill adds the query and reporting layer.
 
 ## Scripts
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `query_practice.py` | Query single practice | `python3 query_practice.py PW.1.1 --specs-dir .kiro/specs/` |
-| `coverage_matrix.py` | Full coverage matrix | `python3 coverage_matrix.py --specs-dir .kiro/specs/` |
-| `gap_report.py` | Gaps only | `python3 gap_report.py --specs-dir .kiro/specs/` |
-| `attestation_check.py` | CISA readiness | `python3 attestation_check.py --specs-dir .kiro/specs/` |
+| `query_practice.py` | Query single practice | `python3 query_practice.py PW.1.1 --specs-dir .specs/` |
+| `coverage_matrix.py` | Full coverage matrix | `python3 coverage_matrix.py --specs-dir .specs/` |
+| `gap_report.py` | Gaps only | `python3 gap_report.py --specs-dir .specs/` |
+| `attestation_check.py` | CISA readiness | `python3 attestation_check.py --specs-dir .specs/` |
 
 ## Prerequisites
 
@@ -44,4 +44,4 @@ This skill requires GDIT-SDAF to be set up. Run once per machine:
 archon workflow run gdit-sdaf-setup
 ```
 
-After setup, scripts are available at `~/.kiro/skills/ssdf-auditor/scripts/`.
+After setup, scripts are available at `~/.specs/skills/ssdf-auditor/scripts/`.

@@ -133,11 +133,11 @@ metadata:
 npm install -g @agentskills/skills-ref
 
 # Validate the skill
-skills-ref validate /home/tom.moore/dev/hcom/.kiro/skills/aws-security-remediation
+skills-ref validate /home/tom.moore/dev/hcom/.specs/skills/aws-security-remediation
 ```
 
 ### Usage in Kiro CLI
-1. Place skill in `.kiro/skills/` directory
+1. Place skill in `.specs/skills/` directory
 2. Agent automatically discovers skill based on description keywords
 3. When user mentions "AWS security", "Security Hub", or "remediation", agent loads skill
 4. Agent follows instructions in SKILL.md

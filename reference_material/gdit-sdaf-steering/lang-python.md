@@ -5,7 +5,7 @@ enforcement: mandatory
 
 # Python Language Standards
 
-Reference examples: `~/.kiro/steering/lang-python-reference.md`
+Reference examples: `~/.specs/steering/lang-python-reference.md`
 
 ## Context
 

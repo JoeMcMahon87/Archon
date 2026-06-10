@@ -1,6 +1,6 @@
 # Documentation Standards
 
-Reference examples: `~/.kiro/steering/documentation-standards-reference.md`
+Reference examples: `~/.specs/steering/documentation-standards-reference.md`
 
 **Protocol**: DOC-STANDARDS
 **Version**: 1.0

@@ -9,7 +9,7 @@ steps:
       - label: Concise
         prompt: |
           Walk me through the GDIT Spec-Driven AI Framework end-to-end. Use a "user-greeting"
-          example to show all 7 workflow stages, the ~/.kiro/ architecture, and
+          example to show all 7 workflow stages, the ~/.specs/ architecture, and
           where the GDIT framework fits with SAFe.
       - label: Minimal
         prompt: |
@@ -19,7 +19,7 @@ steps:
       Give me a concise overview of the GDIT Spec-Driven AI Framework, then walk me through
       the COMPLETE end-to-end workflow for a single feature using a concrete example.
 
-      First, explain the architecture — the framework lives in ~/.kiro/:
+      First, explain the architecture — the framework lives in ~/.specs/:
       - agents/ — Agent configs that define AI identity and behavior
       - steering/ — Standards files (security, naming, workflow, IaC, etc.) that act as guardrails
       - hooks/ — Automated validators that fire on file events (IDE only; CLI runs them manually)
@@ -27,9 +27,9 @@ steps:
       - config/ — Tool-specific configs (e.g., CloudFormation Guard rules) and project.yaml for per-project settings
 
       Then explain that the framework's OUTPUT lives in each project's .kiro/ directory:
-      - .kiro/config/project.yaml — per-project settings (testing strategy, etc.), created
+      - .specs/config/project.yaml — per-project settings (testing strategy, etc.), created
         automatically on first use — the agent asks you to choose settings in conversation
-      - .kiro/specs/ — feature specifications generated through the workflow
+      - .specs/ — feature specifications generated through the workflow
       The AI creates these through conversation with you. They're artifacts, not part of
       the framework itself.
 
@@ -41,7 +41,7 @@ steps:
       ("add a timeout requirement", "change the fallback behavior") or by editing the files
       directly. Both approaches work; conversation with the AI is the primary path.
 
-      Before Stage 1, explain that the agent first checks for .kiro/config/project.yaml.
+      Before Stage 1, explain that the agent first checks for .specs/config/project.yaml.
       If missing, it creates the file and asks the user to choose settings:
       - Testing strategy (off, test-after, test-driven)
       - Language settings (version, linter, type-checker) when a lang-*.md steering file is loaded
@@ -143,7 +143,7 @@ steps:
 
       For this exercise, generate requirements for a simple "hello-world" feature.
 
-      Create .kiro/specs/hello-world/requirements.md with:
+      Create .specs/hello-world/requirements.md with:
       - One user story with 2-3 acceptance criteria
       - Keep it minimal — this is a learning exercise
 
@@ -177,7 +177,7 @@ steps:
       design document. The developer reviews and steers through conversation:
       "use a different pattern", "add error handling", "what about edge cases?"
 
-      Create .kiro/specs/hello-world/design.md that:
+      Create .specs/hello-world/design.md that:
       - References specific requirement numbers it addresses
       - Describes the technical approach (keep it simple)
       - Includes correctness properties (how we know it works)
@@ -222,7 +222,7 @@ steps:
       The developer reviews and adjusts through conversation: "that estimate
       seems high", "split task 2 into two smaller tasks", "add a task for docs".
 
-      Create .kiro/specs/hello-world/tasks.md with:
+      Create .specs/hello-world/tasks.md with:
       - 2-3 implementation tasks derived from the design
       - Effort estimate tables (story points, human LOE, AI-assisted LOE)
       - Requirement and design traceability for each task
@@ -268,7 +268,7 @@ steps:
       traceable specs. If anything fails, tell the AI what to fix — it will
       update the files and re-validate.
 
-      Run: python3 ~/.kiro/scripts/validate-spec.py .kiro/specs/hello-world/
+      Run: python3 ~/.specs/scripts/validate-spec.py .specs/hello-world/
 
       Walk me through the output line by line:
       - What each quality gate checks and why it matters
@@ -313,7 +313,7 @@ steps:
       can adjust through conversation: "add an edge case test", "use a different
       fixture approach", etc.
 
-      First, read .kiro/config/project.yaml and check the testing mode.
+      First, read .specs/config/project.yaml and check the testing mode.
 
       Explain the three testing modes:
       - off: No automated tests. Security scans only.
@@ -424,7 +424,7 @@ steps:
       reviews the results. If gaps are found, tell the AI what to fix and
       it will update the implementation and re-verify.
 
-      Run: python3 ~/.kiro/scripts/validate-spec.py --verify .kiro/specs/hello-world/
+      Run: python3 ~/.specs/scripts/validate-spec.py --verify .specs/hello-world/
 
       Walk me through the output — it runs two layers:
 
@@ -443,7 +443,7 @@ steps:
       - For each criterion/property, verify the code implements it with file:line evidence
       - Produce per-requirement verdict: IMPLEMENTED / PARTIAL / NOT IMPLEMENTED
 
-      Then generate .kiro/specs/hello-world/VERIFICATION.md containing:
+      Then generate .specs/hello-world/VERIFICATION.md containing:
       - Script Results section
       - Criterion Checklist table (one row per acceptance criterion)
       - Coverage Summary (total checked vs total in spec — must match)
@@ -491,10 +491,10 @@ steps:
         * design-system integration (in development-workflow.md) — defines
           DESIGN.md token enforcement for frontend tasks. Enable with
           design-system.enabled: true in project.yaml for UI projects.
-        * All steering files in ~/.kiro/steering/ follow the same pattern —
+        * All steering files in ~/.specs/steering/ follow the same pattern —
           edit them to match your team's standards.
       - Tips for getting the most out of the GDIT framework
-      - Where to go for more info (CONTRIBUTING.md, steering files in ~/.kiro/steering/)
+      - Where to go for more info (CONTRIBUTING.md, steering files in ~/.specs/steering/)
       - Mention that The GDIT framework also runs on OpenCode CLI with Bedrock models
         (testing with early success, local models planned). The workflow
         and specs are identical — only the platform integration differs.

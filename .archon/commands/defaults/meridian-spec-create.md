@@ -155,7 +155,7 @@ Rules:
 ## Phase 5: VALIDATE SPEC
 
 ```bash
-python3 ~/.kiro/scripts/validate-spec.py .meridian/specs/<feature-slug>/
+python3 ~/.specs/scripts/validate-spec.py .meridian/specs/<feature-slug>/
 ```
 
 If FAIL results exist: fix the specific issues and re-run until 0 FAILs.

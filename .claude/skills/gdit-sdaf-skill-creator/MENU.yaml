@@ -46,7 +46,7 @@ workflows:
       Validate a skill directory for common issues.
       
       Steps:
-      1. List all subdirectories in .kiro/skills/
+      1. List all subdirectories in .specs/skills/
       2. Present as numbered menu
       3. User selects skill by number
       4. Run validation on selected skill
@@ -60,7 +60,7 @@ workflows:
       - Description length within limits (1024 chars)
       - No unexpected frontmatter fields
       
-      Run: python3 scripts/quick_validate.py .kiro/skills/<selected-skill>
+      Run: python3 scripts/quick_validate.py .specs/skills/<selected-skill>
     parameters: []
   
   - id: understand-skill
@@ -105,7 +105,7 @@ workflows:
       Update an existing skill with guided workflow.
       
       Steps:
-      1. List all subdirectories in ~/.kiro/skills/ as numbered menu
+      1. List all subdirectories in ~/.specs/skills/ as numbered menu
       2. User selects skill by number
       3. Read selected skill's SKILL.md, MENU.yaml (if exists), and list resource directories
       4. Present structure summary: name, description length, workflow count, resource dirs
@@ -118,7 +118,7 @@ workflows:
          - Assets (add/modify/remove in assets/)
       6. User selects category (or multiple)
       7. Perform updates based on user guidance
-      8. Run validation after updates: python3 scripts/quick_validate.py ~/.kiro/skills/<selected-skill>
+      8. Run validation after updates: python3 scripts/quick_validate.py ~/.specs/skills/<selected-skill>
       
       Rules:
       - Preserve existing content not targeted for update
@@ -135,7 +135,7 @@ workflows:
       Perform a quality review of an existing skill.
       
       Steps:
-      1. List all subdirectories in ~/.kiro/skills/ as numbered menu
+      1. List all subdirectories in ~/.specs/skills/ as numbered menu
       2. User selects skill by number
       3. Read the skill's SKILL.md, MENU.yaml, and list scripts/references/assets
       4. Evaluate against quality checklist:
@@ -163,7 +163,7 @@ workflows:
       
       5. Present findings as actionable feedback with specific suggestions
       6. Run quick_validate.py for structural confirmation:
-         python3 scripts/quick_validate.py ~/.kiro/skills/<selected-skill>
+         python3 scripts/quick_validate.py ~/.specs/skills/<selected-skill>
     parameters: []
 
   - id: tutorial
@@ -180,10 +180,10 @@ workflows:
       Steps:
       1. Read references/tutorial.md for the full walkthrough
       2. Guide the user through each phase, pausing for their input
-      3. At Phase 5, run: python3 ~/.kiro/scripts/validate-spec.py .kiro/specs/greeting-skill/
-      4. At Phase 6, run: python3 scripts/init_skill.py greeting-skill --path ~/.kiro/skills --resources scripts,references --menu
+      3. At Phase 5, run: python3 ~/.specs/scripts/validate-spec.py .specs/greeting-skill/
+      4. At Phase 6, run: python3 scripts/init_skill.py greeting-skill --path ~/.specs/skills --resources scripts,references --menu
       5. At Phase 6, run security scans on the created script (ruff, gitleaks)
-      6. At Phase 7, run: python3 scripts/quick_validate.py ~/.kiro/skills/greeting-skill
+      6. At Phase 7, run: python3 scripts/quick_validate.py ~/.specs/skills/greeting-skill
 
       The tutorial creates a real skill (greeting-skill) that the user keeps.
       After completion, suggest they delete it or customize it further.

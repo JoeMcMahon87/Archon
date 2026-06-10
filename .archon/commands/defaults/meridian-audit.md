@@ -13,11 +13,11 @@ if [ -z "$ARGUMENTS" ]; then
   find . -path ".meridian/specs/*/tasks.md" 2>/dev/null | while read f; do
     spec_dir=$(dirname "$f")
     echo "=== Auditing: $spec_dir ==="
-    python3 ~/.kiro/scripts/audit-steering-compliance.py "$spec_dir" 2>/dev/null || \
+    python3 ~/.specs/scripts/audit-steering-compliance.py "$spec_dir" 2>/dev/null || \
       echo "audit-steering-compliance.py not found — run setup"
   done
 else
-  python3 ~/.kiro/scripts/audit-steering-compliance.py $ARGUMENTS
+  python3 ~/.specs/scripts/audit-steering-compliance.py $ARGUMENTS
 fi
 ```
 
