@@ -2,10 +2,10 @@
   <img src="assets/logo.png" alt="Archon" width="160" />
 </p>
 
-<h1 align="center">Archon</h1>
+<h1 align="center">Archon + GDIT-SDAF</h1>
 
 <p align="center">
-  The first open-source harness builder for AI coding. Make AI coding deterministic and repeatable.
+  Deterministic AI coding workflows with enterprise security and compliance.
 </p>
 
 <p align="center">
@@ -20,9 +20,376 @@
 
 ---
 
+> **Quick Start:** Jump to [Setup & Installation](#setup--installation) to get started in ~15 minutes.
+
+## About This Version
+
+This is Archon with **GDIT-SDAF** (General Dynamics IT Secure Development Automation Framework) - an enterprise-ready extension that adds:
+
+- **Security scanning** - bandit, safety, semgrep, trivy integrated into workflows
+- **Compliance tracking** - NIST SSDF attestation and evidence generation
+- **Branch protection** - mandatory PR reviews, security validation gates
+- **GitLab + GitHub support** - auto-detection and unified forge workflows
+- **10+ GDIT skills** - standardized patterns for secure development
+
 Archon is a workflow engine for AI coding agents. Define your development processes as YAML workflows - planning, implementation, validation, code review, PR creation - and run them reliably across all your projects.
 
 Like what Dockerfiles did for infrastructure and GitHub Actions did for CI/CD - Archon does for AI coding workflows. Think n8n, but for software development.
+
+## Setup & Installation
+
+### Step 1: Install Prerequisites
+
+**Required for all users:**
+
+1. **Bun** (JavaScript runtime) - [bun.sh](https://bun.sh)
+   ```bash
+   # macOS/Linux
+   curl -fsSL https://bun.sh/install | bash
+   
+   # Windows (PowerShell)
+   irm bun.sh/install.ps1 | iex
+   ```
+
+2. **Claude Code** (AI coding assistant) - [claude.ai/code](https://claude.ai/code)
+   ```bash
+   # macOS/Linux/WSL
+   curl -fsSL https://claude.ai/install.sh | bash
+   
+   # Windows (PowerShell)
+   irm https://claude.ai/install.ps1 | iex
+   ```
+
+3. **Python 3.12+** (for GDIT security scanners)
+   ```bash
+   python3 --version  # Should show 3.12.0 or later
+   ```
+
+4. **Git with remote configured**
+   ```bash
+   git remote -v  # Should show origin pointing to GitHub or GitLab
+   ```
+
+**Choose your forge CLI:**
+
+**For GitHub users:**
+```bash
+# macOS
+brew install gh
+
+# Windows (via winget)
+winget install GitHub.cli
+
+# Linux (Debian/Ubuntu)
+sudo apt install gh
+
+# Authenticate
+gh auth login
+```
+
+**For GitLab users:**
+```bash
+# macOS
+brew install glab
+
+# Linux/Windows - see https://gitlab.com/gitlab-org/cli
+
+# Authenticate
+glab auth login
+```
+
+### Step 2: Install Archon
+
+**From source (recommended for GDIT-SDAF):**
+
+```bash
+git clone https://github.com/coleam00/Archon
+cd Archon
+bun install
+```
+
+**Or use pre-compiled binaries:**
+
+```bash
+# macOS / Linux
+curl -fsSL https://archon.diy/install | bash
+
+# Windows (PowerShell)
+irm https://archon.diy/install.ps1 | iex
+
+# Homebrew
+brew install coleam00/archon/archon
+```
+
+> **Note:** Compiled binaries require setting `CLAUDE_BIN_PATH` environment variable:
+> ```bash
+> export CLAUDE_BIN_PATH="$HOME/.local/bin/claude"
+> ```
+> Or set `assistants.claude.claudeBinaryPath` in `~/.archon/config.yaml`.
+
+### Step 3: Configure Archon
+
+Run the interactive setup wizard:
+
+```bash
+# From the Archon repo (source install)
+bun run cli setup
+
+# Or if using compiled binary
+archon setup
+```
+
+The wizard will prompt you for:
+
+1. **AI Assistant Selection**
+   - Claude (recommended)
+   - Codex (optional)
+   - Pi (optional, community provider)
+
+2. **Platform Connections** (all optional)
+   - **GitHub** - for issue/PR automation via webhooks
+   - **GitLab** - for issue/MR automation via webhooks  
+   - Telegram - for remote chat access
+   - Slack - for workspace integration
+
+3. **Forge Provider Confirmation**
+   
+   The wizard auto-detects your forge from git remote:
+   - URL contains `gitlab` → GitLab
+   - Otherwise → GitHub
+   
+   You'll be prompted to confirm and the wizard will:
+   - Install the appropriate CLI (gh or glab) if missing
+   - Run authentication (gh auth login or glab auth login)
+   - Test the connection
+
+4. **Security Configuration**
+
+   For GitHub:
+   - Personal Access Token (fine-grained)
+     - Issues: Read and write
+     - Pull requests: Read and write
+     - Contents: Read
+   - Webhook secret (auto-generated)
+   - Allowed users (optional whitelist)
+   - Bot mention name (optional)
+
+   For GitLab:
+   - Personal Access Token with `api` scope
+   - GitLab instance URL (defaults to gitlab.com)
+   - Webhook secret (auto-generated)
+   - Allowed users (optional whitelist)
+   - Bot mention name (optional)
+
+Configuration is saved to `~/.archon/.env` (home-scoped) or `<project>/.archon/.env` (project-scoped).
+
+### Step 4: Set Up Your Project
+
+Navigate to your project and run the GDIT-SDAF onboarding workflow:
+
+```bash
+cd /path/to/your/project
+archon workflow run gdit-sdaf-onboard
+```
+
+This automated workflow (5-10 minutes):
+
+✓ **Detects your forge** - Auto-configures for GitHub or GitLab  
+✓ **Verifies CLI auth** - Ensures gh/glab authentication is working  
+✓ **Installs security scanners** - bandit, safety, semgrep, trivy via pip  
+✓ **Copies GDIT scripts** - Adds 20+ security and compliance scripts to `.archon/scripts/`  
+✓ **Installs GDIT skills** - Adds 10+ Claude Code skills to `.claude/skills/`  
+✓ **Creates config files** - Generates `.archon/config.yaml` with forge settings  
+✓ **Generates report** - Produces verification report with next steps
+
+**What gets created:**
+
+```
+your-project/
+├── .archon/
+│   ├── config.yaml              # Forge provider: github or gitlab
+│   ├── scripts/                 # 20+ security & compliance scripts
+│   │   ├── security-scan.py
+│   │   ├── ssdf-attestation.py
+│   │   └── ...
+│   └── workflows/               # Optional: custom workflows
+│       └── ...
+├── .claude/
+│   └── skills/                  # 10+ GDIT skills
+│       ├── gdit-sdaf-git-dev-workflow/
+│       ├── gdit-sdaf-ssdf-compliance-mapping/
+│       └── ...
+└── docs/                        # Created if missing
+```
+
+### Step 5: Verify Installation
+
+Check that everything is configured correctly:
+
+```bash
+archon doctor
+```
+
+This validates:
+- ✓ Claude binary path and version
+- ✓ gh or glab CLI authentication
+- ✓ Database connectivity (SQLite by default)
+- ✓ Workspace directory writability
+- ✓ Bundled workflows and commands loaded
+- ✓ Platform adapter connectivity (if configured)
+
+All checks should pass. If any fail, run `archon setup` again to reconfigure.
+
+### Step 6: Start Using Archon + GDIT-SDAF
+
+**From the command line:**
+
+```bash
+# List available workflows (includes GDIT-specific workflows)
+archon workflow list
+
+# Run a workflow
+archon workflow run gdit-sdaf-fix-issue "Fix authentication bug"
+
+# Or use Claude Code with the archon skill
+claude
+```
+
+Then in Claude Code:
+```
+Use archon to fix issue #42 with security validation
+```
+
+**Using GDIT skills directly in Claude Code:**
+
+```
+/gdit-sdaf-git-dev-workflow - Guided commit, branch protection validation, PR creation
+/gdit-sdaf-ssdf-compliance-mapping - Map changes to NIST SSDF practices
+/gdit-sdaf-gitlab-security-scanning - Run security scans (works for GitHub too)
+```
+
+**Web UI (optional):**
+
+Start the web dashboard:
+
+```bash
+# From source
+bun run dev
+
+# From binary
+archon serve
+```
+
+Navigate to `http://localhost:3090` to:
+- Chat with your AI coding agent
+- Monitor running workflows in real-time
+- View workflow history and metrics
+- Create/edit workflows visually
+- Register and manage projects
+
+### Configuration Files
+
+**~/.archon/.env** - Credentials (never commit this)
+```bash
+# AI Assistants
+CLAUDE_USE_GLOBAL_AUTH=true
+DEFAULT_AI_ASSISTANT=claude
+
+# Forge (GitHub or GitLab)
+FORGE_PROVIDER=github          # or gitlab
+GITHUB_TOKEN=ghp_xxxxx         # or GITLAB_TOKEN=glpat_xxxxx
+GH_TOKEN=ghp_xxxxx             # same as GITHUB_TOKEN
+WEBHOOK_SECRET=xxxxx           # auto-generated
+GITHUB_ALLOWED_USERS=user1,user2   # optional whitelist
+
+# Optional platforms
+TELEGRAM_BOT_TOKEN=xxxxx
+SLACK_BOT_TOKEN=xxxxx
+```
+
+**~/.archon/config.yaml** - Preferences
+```yaml
+assistants:
+  claude:
+    model: sonnet
+    settingSources: [project, user]
+    claudeBinaryPath: /path/to/claude  # if using compiled binary
+
+forge:
+  provider: github  # or gitlab (set by gdit-sdaf-onboard)
+
+worktree:
+  baseBranch: dev   # or main, master
+
+docs:
+  path: docs/       # documentation directory
+```
+
+**<project>/.archon/config.yaml** - Project-specific overrides
+```yaml
+forge:
+  provider: gitlab  # override for this project only
+
+worktree:
+  baseBranch: main
+
+docs:
+  path: documentation/
+```
+
+### Troubleshooting Setup
+
+**"CLAUDE_BIN_PATH is not set"** (compiled binaries only)
+```bash
+# Find where Claude Code installed
+which claude
+
+# Set the path (add to ~/.bashrc or ~/.zshrc)
+export CLAUDE_BIN_PATH="$HOME/.local/bin/claude"
+
+# Or set in config
+echo "assistants:
+  claude:
+    claudeBinaryPath: $HOME/.local/bin/claude" > ~/.archon/config.yaml
+```
+
+**"gh auth status failed"** or **"glab auth status failed"**
+```bash
+# GitHub
+gh auth login
+
+# GitLab
+glab auth login
+```
+
+**"Python version too old"**
+```bash
+# Install Python 3.12+
+# macOS
+brew install python@3.12
+
+# Ubuntu/Debian
+sudo apt install python3.12
+
+# Windows - download from python.org
+```
+
+**"Database not reachable"**
+
+By default, Archon uses SQLite at `~/.archon/archon.db` (auto-created, no setup needed). If you see database errors, check disk space and permissions.
+
+For PostgreSQL (optional, for heavy workloads):
+```bash
+docker compose --profile with-db up -d postgres
+echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/remote_coding_agent" >> ~/.archon/.env
+```
+
+### Next Steps
+
+- [Core Concepts](https://archon.diy/getting-started/concepts/) - Understand workflows, nodes, commands
+- [Authoring Workflows](https://archon.diy/guides/authoring-workflows/) - Create custom YAML workflows
+- [GDIT-SDAF Skills](/GDIT_ONBOARDING.md) - Deep dive into security and compliance features
+- [CLI Reference](https://archon.diy/reference/cli/) - Full command reference
 
 ## Why Archon?
 
@@ -76,16 +443,15 @@ nodes:
 Tell your coding agent what you want, and Archon handles the rest:
 
 ```
-You: Use archon to add dark mode to the settings page
+You: Use archon to fix issue #42
 
-Agent: I'll run the archon-idea-to-pr workflow for this.
-       → Creating isolated worktree on branch archon/task-dark-mode...
-       → Planning...
-       → Implementing (task 1/4)...
-       → Implementing (task 2/4)...
-       → Tests failing - iterating...
-       → Tests passing after 2 iterations
-       → Code review complete - 0 issues
+Agent: I'll run the gdit-sdaf-fix-github-issue workflow for this.
+       → Creating isolated worktree on branch archon/issue-42...
+       → Planning implementation...
+       → Running security scans (bandit, safety, semgrep)...
+       → Implementing fix...
+       → Validating against SSDF requirements...
+       → All scans passed, creating PR...
        → PR ready: https://github.com/you/project/pull/47
 ```
 
@@ -93,140 +459,39 @@ Agent: I'll run the archon-idea-to-pr workflow for this.
 
 Looking for the original Python-based Archon (task management + RAG)? It's fully preserved on the [`archive/v1-task-management-rag`](https://github.com/coleam00/Archon/tree/archive/v1-task-management-rag) branch.
 
-## Getting Started
-
-> **Most users should start with the [Full Setup](#full-setup-5-minutes)** - it walks you through credentials, installs the Archon skill into your projects, and gives you the web dashboard.
->
-> **Already have Claude Code and just want the CLI?** Jump to the [Quick Install](#quick-install-30-seconds).
-
-### Full Setup (5 minutes)
-
-Clone the repo and use the guided setup wizard. This configures credentials, platform integrations, and copies the Archon skill into your target projects.
-
-<details>
-<summary><b>Prerequisites</b> - Bun, Claude Code, and the GitHub CLI</summary>
-
-**Bun** - [bun.sh](https://bun.sh)
-
-```bash
-# macOS/Linux
-curl -fsSL https://bun.sh/install | bash
-
-# Windows (PowerShell)
-irm bun.sh/install.ps1 | iex
-```
-
-**GitHub CLI** - [cli.github.com](https://cli.github.com/)
-
-```bash
-# macOS
-brew install gh
-
-# Windows (via winget)
-winget install GitHub.cli
-
-# Linux (Debian/Ubuntu)
-sudo apt install gh
-```
-
-**Claude Code** - [claude.ai/code](https://claude.ai/code)
-
-```bash
-# macOS/Linux/WSL
-curl -fsSL https://claude.ai/install.sh | bash
-
-# Windows (PowerShell)
-irm https://claude.ai/install.ps1 | iex
-```
-
-</details>
-
-```bash
-git clone https://github.com/coleam00/Archon
-cd Archon
-bun install
-claude
-```
-
-Then say: **"Set up Archon"**
-
-The setup wizard walks you through everything: CLI installation, authentication, platform selection, and copies the Archon skill to your target repo.
-
-### Quick Install (30 seconds)
-
-Already have Claude Code set up? Install the standalone CLI binary and skip the wizard.
-
-**macOS / Linux**
-```bash
-curl -fsSL https://archon.diy/install | bash
-```
-
-**Windows (PowerShell)**
-```powershell
-irm https://archon.diy/install.ps1 | iex
-```
-
-**Homebrew**
-```bash
-brew install coleam00/archon/archon
-```
-
-> **Compiled binaries need a `CLAUDE_BIN_PATH`.** The quick-install binaries
-> don't bundle Claude Code. Install it separately, then point Archon at it:
->
-> ```bash
-> # macOS / Linux / WSL
-> curl -fsSL https://claude.ai/install.sh | bash
-> export CLAUDE_BIN_PATH="$HOME/.local/bin/claude"
->
-> # Windows (PowerShell)
-> irm https://claude.ai/install.ps1 | iex
-> $env:CLAUDE_BIN_PATH = "$env:USERPROFILE\.local\bin\claude.exe"
-> ```
->
-> Or set `assistants.claude.claudeBinaryPath` in `~/.archon/config.yaml`.
-> The Docker image ships Claude Code pre-installed. See [AI Assistants → Binary path configuration](https://archon.diy/docs/getting-started/ai-assistants/#binary-path-configuration-compiled-binaries-only) for details.
-
-### Start Using Archon
-
-Once you've completed either setup path, go to your project and start working:
-
-```bash
-cd /path/to/your/project
-claude
-```
-
-```
-Use archon to fix issue #42
-```
-
-```
-What archon workflows do I have? When would I use each one?
-```
-
-The coding agent handles workflow selection, branch naming, and worktree isolation for you. Projects are registered automatically the first time they're used.
-
-> **Important:** Always run Claude Code from your target repo, not from the Archon repo. The setup wizard copies the Archon skill into your project so it works from there.
-
 ## Web UI
 
-Archon includes a web dashboard for chatting with your coding agent, running workflows, and monitoring activity. Binary installs: run `archon serve` to download and start the web UI in one step. From source: ask your coding agent to run the frontend from the Archon repo, or run `bun run dev` from the repo root yourself.
+Archon includes a web dashboard for chatting with your AI coding agent, running workflows, and monitoring activity. 
 
-Register a project by clicking **+** next to "Project" in the chat sidebar - enter a GitHub URL or local path. Then start a conversation, invoke workflows, and watch progress in real time.
+**Starting the Web UI:**
 
-**Key pages:**
+```bash
+# From source (recommended)
+bun run dev
+
+# From binary
+archon serve
+```
+
+Navigate to `http://localhost:3090`
+
+**Key features:**
 - **Chat** - Conversation interface with real-time streaming and tool call visualization
 - **Dashboard** - Mission Control for monitoring running workflows, with filterable history by project, status, and date
 - **Workflow Builder** - Visual drag-and-drop editor for creating DAG workflows with loop nodes
 - **Workflow Execution** - Step-by-step progress view for any running or completed workflow
 
-**Monitoring hub:** The sidebar shows conversations from **all platforms** - not just the web. Workflows kicked off from the CLI, messages from Slack or Telegram, GitHub issue interactions - everything appears in one place.
+**Monitoring hub:** The sidebar shows conversations from **all platforms** - not just the web. Workflows kicked off from the CLI, messages from Slack or Telegram, GitHub/GitLab issue interactions - everything appears in one place.
+
+Register a project by clicking **+** next to "Project" in the chat sidebar - enter a GitHub/GitLab URL or local path. Then start a conversation, invoke workflows, and watch progress in real time.
 
 See the [Web UI Guide](https://archon.diy/adapters/web/) for full documentation.
 
 ## What Can You Automate?
 
-Archon ships with workflows for common development tasks:
+Archon + GDIT-SDAF ships with 18 base workflows plus 10+ GDIT-specific workflows for secure development:
+
+### Base Archon Workflows
 
 | Workflow | What it does |
 |----------|-------------|
@@ -234,24 +499,34 @@ Archon ships with workflows for common development tasks:
 | `archon-fix-github-issue` | Classify issue → investigate/plan → implement → validate → PR → smart review → self-fix |
 | `archon-idea-to-pr` | Feature idea → plan → implement → validate → PR → 5 parallel reviews → self-fix |
 | `archon-plan-to-pr` | Execute existing plan → implement → validate → PR → review → self-fix |
-| `archon-issue-review-full` | Comprehensive fix + full multi-agent review pipeline for GitHub issues |
+| `archon-issue-review-full` | Comprehensive fix + full multi-agent review pipeline for issues |
 | `archon-smart-pr-review` | Classify PR complexity → run targeted review agents → synthesize findings |
 | `archon-comprehensive-pr-review` | Multi-agent PR review (5 parallel reviewers) with automatic fixes |
-| `archon-create-issue` | Classify problem → gather context → investigate → create GitHub issue |
+| `archon-create-issue` | Classify problem → gather context → investigate → create issue |
 | `archon-validate-pr` | Thorough PR validation testing both main and feature branches |
 | `archon-resolve-conflicts` | Detect merge conflicts → analyze both sides → resolve → validate → commit |
 | `archon-feature-development` | Implement feature from plan → validate → create PR |
 | `archon-architect` | Architectural sweep, complexity reduction, codebase health improvement |
 | `archon-refactor-safely` | Safe refactoring with type-check hooks and behavior verification |
-| `archon-ralph-dag` | PRD implementation loop - iterate through stories until done |
-| `archon-remotion-generate` | Generate or modify Remotion video compositions with AI |
-| `archon-test-loop-dag` | Loop node test workflow - iterative counter until completion |
-| `archon-piv-loop` | Guided Plan-Implement-Validate loop with human review between iterations |
-| `archon-metrics-reconcile` | Daily reconciliation of workflow metrics with GitHub PR outcomes - updates merged/CI status |
 
-Archon ships 18 default workflows - run `archon workflow list` or describe what you want and the router picks the right one.
+### GDIT-SDAF Workflows
 
-**Or define your own.** Default workflows are great starting points - copy one from `.archon/workflows/defaults/` and customize it. Workflows are YAML files in `.archon/workflows/`, commands are markdown files in `.archon/commands/`. Same-named files in your repo override the bundled defaults. Commit them - your whole team runs the same process.
+| Workflow | What it does |
+|----------|-------------|
+| `gdit-sdaf-onboard` | One-command setup: forge detection, CLI auth, scanner install, config generation |
+| `gdit-sdaf-fix-issue` | Secure issue resolution with security scans at every gate |
+| `gdit-sdaf-secure-pr` | Create PR with mandatory security validation and compliance checks |
+| `gdit-sdaf-audit` | Run full security audit (bandit, safety, semgrep, trivy) and generate report |
+| `gdit-sdaf-ssdf-attest` | Generate NIST SSDF attestation with evidence for completed work |
+
+**List all available workflows:**
+```bash
+archon workflow list
+```
+
+**Or just describe what you want** - the router picks the right workflow automatically.
+
+**Define your own workflows.** Workflows are YAML files in `.archon/workflows/`, commands are markdown files in `.archon/commands/`. Same-named files in your repo override the bundled defaults. Commit them - your whole team runs the same process.
 
 See [Authoring Workflows](https://archon.diy/guides/authoring-workflows/) and [Authoring Commands](https://archon.diy/guides/authoring-commands/).
 
@@ -286,16 +561,26 @@ jq 'select(.outcome == "failure")' ~/.archon/metrics/runs-$(date +%Y-%m).jsonl
 
 The metrics data is designed to accumulate over time so you can build effort estimation models - correlating input size and complexity signals with actual cost and cycle time across your real workload.
 
-## Add a Platform
+## Platform Integrations
 
-The Web UI and CLI work out of the box. Optionally connect a chat platform for remote access:
+The Web UI and CLI work out of the box. Optionally connect platforms for remote access and automation:
+
+### Forge Adapters (for issue/PR automation)
+
+| Platform | Setup time | Guide |
+|----------|-----------|-------|
+| **GitHub** | 15 min | [GitHub Guide](https://archon.diy/adapters/github/) - Configured during `archon setup` |
+| **GitLab** | 15 min | [GitLab Guide](https://archon.diy/adapters/gitlab/) - Configured during `archon setup` |
+
+### Chat Adapters (for remote access)
 
 | Platform | Setup time | Guide |
 |----------|-----------|-------|
 | **Telegram** | 5 min | [Telegram Guide](https://archon.diy/adapters/telegram/) |
 | **Slack** | 15 min | [Slack Guide](https://archon.diy/adapters/slack/) |
-| **GitHub Webhooks** | 15 min | [GitHub Guide](https://archon.diy/adapters/github/) |
 | **Discord** | 5 min | [Discord Guide](https://archon.diy/adapters/community/discord/) |
+
+All platforms are configured through `archon setup` or by manually editing `~/.archon/.env`.
 
 ## Architecture
 
@@ -336,7 +621,9 @@ Full documentation is available at **[archon.diy](https://archon.diy)**.
 
 | Topic | Description |
 |-------|-------------|
-| [Getting Started](https://archon.diy/getting-started/overview/) | Setup guide (Web UI or CLI) |
+| [Setup & Installation](#setup--installation) | Complete setup guide above (with GDIT-SDAF) |
+| [GDIT-SDAF Onboarding](/GDIT_ONBOARDING.md) | Deep dive into security workflows and skills |
+| [Getting Started](https://archon.diy/getting-started/overview/) | Base Archon setup guide |
 | [The Book of Archon](https://archon.diy/book/) | 10-chapter narrative tutorial |
 | [CLI Reference](https://archon.diy/reference/cli/) | Full CLI reference |
 | [Authoring Workflows](https://archon.diy/guides/authoring-workflows/) | Create custom YAML workflows |
