@@ -189,7 +189,7 @@ Navigate to your project and run the GDIT-SDAF onboarding workflow:
 
 ```bash
 cd /path/to/your/project
-archon workflow run gdit-sdaf-onboard
+archon workflow run meridian-onboard
 ```
 
 This automated workflow (5-10 minutes):
@@ -316,7 +316,7 @@ assistants:
     claudeBinaryPath: /path/to/claude  # if using compiled binary
 
 forge:
-  provider: github  # or gitlab (set by gdit-sdaf-onboard)
+  provider: github  # or gitlab (set by meridian-onboard)
 
 worktree:
   baseBranch: dev   # or main, master
@@ -513,7 +513,7 @@ Archon + GDIT-SDAF ships with 18 base workflows plus 10+ GDIT-specific workflows
 
 | Workflow | What it does |
 |----------|-------------|
-| `gdit-sdaf-onboard` | One-command setup: forge detection, CLI auth, scanner install, config generation |
+| `meridian-onboard` | One-command setup: forge detection, CLI auth, scanner install, config generation |
 | `gdit-sdaf-fix-issue` | Secure issue resolution with security scans at every gate |
 | `gdit-sdaf-secure-pr` | Create PR with mandatory security validation and compliance checks |
 | `gdit-sdaf-audit` | Run full security audit (bandit, safety, semgrep, trivy) and generate report |

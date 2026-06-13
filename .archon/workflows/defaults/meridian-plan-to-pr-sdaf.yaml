@@ -98,16 +98,7 @@ nodes:
       echo "GDIT setup verified."
 
   - id: detect-input
-    prompt: |
-      Determine the input type from: $ARGUMENTS
-
-      Rules:
-      - If $ARGUMENTS points to a directory containing tasks.md → output exactly: gdit-spec
-      - If $ARGUMENTS points to a .md file containing "## Tasks" or "## Step-by-Step Tasks" → output exactly: archon-plan
-      - If $ARGUMENTS is empty → check $ARTIFACTS_DIR/plan.md; if found, output: archon-plan
-      - If nothing matches → output: unknown
-
-      Output ONLY one of: gdit-spec OR archon-plan OR unknown
+    command: meridian-detect-sdaf-input
     depends_on: [guard-setup]
     context: fresh
 
@@ -145,30 +136,7 @@ nodes:
     context: fresh
 
   - id: verify-pr-base
-    bash: |
-      set -euo pipefail
-      EXPECTED="$BASE_BRANCH"
-      BRANCH=$(git branch --show-current)
-      if [ "$FORGE_PROVIDER" = "gitlab" ]; then
-        MR_DATA=$(glab mr list --source-branch "$BRANCH" --output json --limit 1 2>/dev/null || echo "[]")
-        ACTUAL=$(echo "$MR_DATA" | jq -r '.[0].target_branch // empty')
-        if [ -n "$ACTUAL" ] && [ "$ACTUAL" != "$EXPECTED" ]; then
-          MR_IID=$(echo "$MR_DATA" | jq -r '.[0].iid')
-          echo "Base mismatch on MR !$MR_IID: expected=$EXPECTED actual=$ACTUAL — re-targeting" >&2
-          glab mr update "$MR_IID" --target-branch "$EXPECTED"
-        else
-          echo "MR base verified: ${ACTUAL:-$EXPECTED}"
-        fi
-      else
-        ACTUAL=$(gh pr view --json baseRefName -q '.baseRefName' 2>/dev/null || echo "")
-        if [ -n "$ACTUAL" ] && [ "$ACTUAL" != "$EXPECTED" ]; then
-          PR_NUMBER=$(gh pr view --json number -q '.number')
-          echo "Base mismatch on PR #$PR_NUMBER: expected=$EXPECTED actual=$ACTUAL — re-targeting" >&2
-          gh pr edit "$PR_NUMBER" --base "$EXPECTED"
-        else
-          echo "PR base verified: ${ACTUAL:-$EXPECTED}"
-        fi
-      fi
+    command: meridian-verify-pr-base
     depends_on: [finalize-pr]
 
   - id: review-scope

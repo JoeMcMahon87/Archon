@@ -7,7 +7,7 @@ Complete setup guide for using GDIT-SDAF workflows with Archon.
 From your project directory, run:
 
 ```bash
-archon workflow run gdit-sdaf-onboard
+archon workflow run meridian-onboard
 ```
 
 This single command handles:
@@ -194,7 +194,7 @@ git clone https://github.com/coleam00/Archon.git
 cd Archon
 
 # Run onboarding
-archon workflow run gdit-sdaf-onboard
+archon workflow run meridian-onboard
 ```
 
 The workflow will:
@@ -242,7 +242,7 @@ archon workflow list | grep gdit-sdaf
 
 Common workflows:
 
-- `gdit-sdaf-onboard` - This onboarding workflow
+- `meridian-onboard` - This onboarding workflow
 - `gdit-sdaf-setup` - Core GDIT setup (called by onboard)
 - `gdit-sdaf-security-scan` - Run security scanners
 - `gdit-sdaf-compliance-report` - Generate compliance reports
@@ -342,7 +342,7 @@ Edit these files to customize behavior.
 The onboarding workflow is **idempotent** - safe to re-run:
 
 ```bash
-archon workflow run gdit-sdaf-onboard
+archon workflow run meridian-onboard
 ```
 
 Behavior:
@@ -450,7 +450,7 @@ When running Archon from source:
 
 ```bash
 cd Archon
-bun run cli workflow run gdit-sdaf-onboard
+bun run cli workflow run meridian-onboard
 ```
 
 ### Different Project Branches

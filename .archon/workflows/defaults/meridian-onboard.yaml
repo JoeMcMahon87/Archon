@@ -1,4 +1,4 @@
-name: onboard
+name: meridian-onboard
 description: |
   Complete GDIT-SDAF onboarding workflow for new developers.
 
@@ -386,8 +386,8 @@ nodes:
       echo "=== Copying GDIT Scripts ==="
       echo ""
 
-      MERIDIAN_HOME="$(git rev-parse --show-toplevel)/.meridian"
-      GDIT_SCRIPTS_DST="$MERIDIAN_HOME/scripts"
+      # Install scripts globally to ~/.meridian/scripts/ (referenced by all workflows)
+      GDIT_SCRIPTS_DST="$HOME/.meridian/scripts"
       mkdir -p "$GDIT_SCRIPTS_DST"
 
       # Try to find GDIT scripts in current repo
@@ -419,13 +419,13 @@ nodes:
       echo ""
       echo "To install GDIT scripts, you have two options:"
       echo ""
-      echo "1. Run this workflow from the Archon repository:"
-      echo "   cd /path/to/Archon"
-      echo "   archon workflow run onboard"
+      echo "1. Run this workflow from the Meridian repository:"
+      echo "   cd /path/to/meridian"
+      echo "   archon workflow run meridian-onboard"
       echo ""
-      echo "2. Manually copy scripts from Archon repository:"
+      echo "2. Manually copy scripts from Meridian repository:"
       echo "   mkdir -p $GDIT_SCRIPTS_DST"
-      echo "   cp /path/to/Archon/.archon/scripts/meridian/*.py $GDIT_SCRIPTS_DST/"
+      echo "   cp /path/to/meridian/.archon/scripts/meridian/*.py $GDIT_SCRIPTS_DST/"
       echo ""
       echo "Continuing with other setup steps..."
     depends_on: [check-python]
@@ -437,8 +437,8 @@ nodes:
       echo "=== Installing GDIT Skills ==="
       echo ""
 
-      MERIDIAN_HOME="$(git rev-parse --show-toplevel)/.meridian"
-      GDIT_SKILLS="$ARCHON_HOME/skills"
+      # Install skills to ~/.claude/skills/ (user-level, where Claude Code reads them)
+      GDIT_SKILLS="$HOME/.claude/skills"
       mkdir -p "$GDIT_SKILLS"
 
       INSTALLED_COUNT=0
@@ -452,8 +452,7 @@ nodes:
         for skill_dir in "$REPO_ROOT/.claude/skills/"*/; do
           [ -d "$skill_dir" ] || continue
 
-          # Strip  prefix
-          skill_name=$(basename "$skill_dir" | sed 's/^//')
+          skill_name=$(basename "$skill_dir")
           target="$GDIT_SKILLS/$skill_name"
 
           if [ -d "$target" ]; then
@@ -480,8 +479,8 @@ nodes:
           echo ""
           echo "[WARNING] GDIT skills not found"
           echo ""
-          echo "To install, run from Archon repository:"
-          echo "  cd /path/to/Archon && archon workflow run onboard"
+          echo "To install, run from Meridian repository:"
+          echo "  cd /path/to/meridian && archon workflow run meridian-onboard"
           echo ""
           echo "Continuing..."
         fi
@@ -564,13 +563,13 @@ nodes:
          - Confirm `forge.provider` is set (github or gitlab)
          - Show the configured value
 
-      2. **GDIT Scripts**: Check `~/.archon/scripts/meridian/`
+      2. **GDIT Scripts**: Check `~/.meridian/scripts/`
          - List Python scripts found
          - Count total scripts
 
-      3. **GDIT Skills**: Check `~/.archon/skills/`
-         - List directories WITHOUT the  prefix
-         - Example: aws-security-remediation, gitlab-security-scanning
+      3. **GDIT Skills**: Check `~/.claude/skills/`
+         - List directories with the `gdit-sdaf-` prefix
+         - Example: gdit-sdaf-git-dev-workflow, gdit-sdaf-ssdf-compliance-mapping
 
       4. **Project Config**: Check `.meridian/config/project.yaml`
          - Confirm it exists
@@ -597,7 +596,7 @@ nodes:
         [list script names]
 
       GDIT Skills: [count] installed
-        [list skill names without  prefix]
+        [list skill names]
 
       Project Config:
         [OK] .meridian/config/project.yaml

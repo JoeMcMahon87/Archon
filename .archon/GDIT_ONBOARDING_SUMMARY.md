@@ -93,7 +93,7 @@ Multiple manual steps required:
 
 Single command:
 ```bash
-archon workflow run onboard
+archon workflow run meridian-onboard
 ```
 
 **Time**: 5-10 minutes (first run), 1 minute (verification re-run)  
@@ -266,7 +266,7 @@ cp -r ~/.kiro ~/.kiro.backup
 mv ~/.kiro ~/.specs
 
 # 3. Run verification
-archon workflow run onboard
+archon workflow run meridian-onboard
 
 # Note: All framework references now use ~/.specs/ instead of ~/.kiro/
 ```
@@ -361,7 +361,7 @@ All 6 GDIT workflows validated:
 
 The GDIT-SDAF onboarding implementation provides a comprehensive, production-ready solution for new developer onboarding. The workflow is:
 
-- ✅ **Single command** - `archon workflow run onboard`
+- ✅ **Single command** - `archon workflow run meridian-onboard`
 - ✅ **Fully automated** - Forge detection, config creation, dependency checks
 - ✅ **Idempotent** - Safe to re-run for verification or updates
 - ✅ **Well documented** - 500+ lines of user-facing docs
