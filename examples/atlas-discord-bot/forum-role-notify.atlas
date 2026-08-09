@@ -1,0 +1,2 @@
+{if;{channel.isThread};{responder.channel;NOTIFY_CHANNEL_ID}{responder.text;📣 New forum post from {user.mention} in **{channel.name}**
+{message.jumpUrl}}{responder.send}}
